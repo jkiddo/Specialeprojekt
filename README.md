@@ -1,4 +1,4 @@
 Epilepsidetektion specialeprojekt repository
 
 Author:
-Oliver Ahrenfeldt
+Oliver Ahrenfeldt Petersen
