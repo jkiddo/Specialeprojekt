@@ -13,13 +13,13 @@
 
     <fragment
         android:id="@+id/navigation_healthMetrics"
-        android:name="com.example.seizureapp.ui.dashboard.DashboardFragment"
+        android:name="com.example.seizureapp.ui.healthmetrics.HealthMetricsFragment"
         android:label="@string/title_healthMetrics"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_healthMetrics" />
 
     <fragment
         android:id="@+id/navigation_connections"
-        android:name="com.example.seizureapp.ui.notifications.NotificationsFragment"
+        android:name="com.example.seizureapp.ui.connections.ConnectionsFragment"
         android:label="@string/title_connections"
-        tools:layout="@layout/fragment_notifications" />
+        tools:layout="@layout/fragment_connections" />
 </navigation>

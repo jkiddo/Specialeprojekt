@@ -1,4 +1,4 @@
-package com.example.seizureapp.ui.notifications;
+package com.example.seizureapp.ui.healthmetrics;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -14,17 +14,17 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.seizureapp.R;
 
-public class NotificationsFragment extends Fragment {
+public class HealthMetricsFragment extends Fragment {
 
-    private NotificationsViewModel notificationsViewModel;
+    private HealthMetricsViewModel healthMetricsViewModel;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        notificationsViewModel =
-                new ViewModelProvider(this).get(NotificationsViewModel.class);
-        View root = inflater.inflate(R.layout.fragment_notifications, container, false);
-        final TextView textView = root.findViewById(R.id.text_notifications);
-        notificationsViewModel.getText().observe(getViewLifecycleOwner(), new Observer<String>() {
+        healthMetricsViewModel =
+                new ViewModelProvider(this).get(HealthMetricsViewModel.class);
+        View root = inflater.inflate(R.layout.fragment_healthmetrics, container, false);
+        final TextView textView = root.findViewById(R.id.text_healthMetrics);
+        healthMetricsViewModel.getText().observe(getViewLifecycleOwner(), new Observer<String>() {
             @Override
             public void onChanged(@Nullable String s) {
                 textView.setText(s);
