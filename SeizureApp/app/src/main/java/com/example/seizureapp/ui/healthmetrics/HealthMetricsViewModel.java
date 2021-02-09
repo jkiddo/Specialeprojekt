@@ -10,7 +10,7 @@ public class HealthMetricsViewModel extends ViewModel {
 
     public HealthMetricsViewModel() {
         mText = new MutableLiveData<>();
-        mText.setValue("This is dashboard fragment");
+        mText.setValue("This is health metrics fragment");
     }
 
     public LiveData<String> getText() {

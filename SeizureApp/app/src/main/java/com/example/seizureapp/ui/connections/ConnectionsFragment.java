@@ -37,6 +37,24 @@ public class ConnectionsFragment extends Fragment {
         ArrayList<String> devices = new ArrayList<>();
         devices.add("Cortrium C3+");
         devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
+        devices.add("Cortrium C3+");
+        devices.add("Oliver");
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 getContext(),
