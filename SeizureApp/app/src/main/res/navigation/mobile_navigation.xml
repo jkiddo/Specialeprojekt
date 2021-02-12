@@ -15,11 +15,17 @@
         android:id="@+id/navigation_healthMetrics"
         android:name="com.example.seizureapp.ui.healthmetrics.HealthMetricsFragment"
         android:label="@string/title_healthMetrics"
-        tools:layout="@layout/fragment_healthMetrics" />
+        tools:layout="@layout/fragment_healthmetrics" />
 
     <fragment
         android:id="@+id/navigation_connections"
         android:name="com.example.seizureapp.ui.connections.ConnectionsFragment"
         android:label="@string/title_connections"
         tools:layout="@layout/fragment_connections" />
+
+    <fragment
+        android:id="@+id/navigation_testing"
+        android:name="com.example.seizureapp.ui.testing.TestingFragment"
+        android:label="Testing"
+        tools:layout="@layout/fragment_testing"/>
 </navigation>

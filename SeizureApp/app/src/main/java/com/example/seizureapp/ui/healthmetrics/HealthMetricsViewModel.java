@@ -10,7 +10,7 @@ public class HealthMetricsViewModel extends ViewModel {
 
     public HealthMetricsViewModel() {
         mText = new MutableLiveData<>();
-        mText.setValue("This is health metrics fragment");
+        mText.setValue("linje1\nlinje2\nlinje1\nlinje2\nlinje1\nlinje2\nlinje1\nlinje2\nlinje1\nlinje2\nlinje1\nlinje2\nlinje1\nlinje2\n");
     }
 
     public LiveData<String> getText() {

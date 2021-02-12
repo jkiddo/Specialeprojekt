@@ -14,5 +14,9 @@
         android:id="@+id/navigation_connections"
         android:icon="@drawable/icon_connections"
         android:title="@string/title_connections" />
+    <item
+        android:id="@+id/navigation_testing"
+        android:icon="@drawable/icon_testing"
+        android:title="Test"/>
 
 </menu>
