@@ -3,6 +3,7 @@ package com.example.seizureapp;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 
+import com.example.seizureapp.ui.home.HomeViewModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,5 +28,4 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
     }
-
 }
