@@ -43,6 +43,9 @@ public class QRSDetectorParameters
     public int MS195 ;
     public int MS200 ;
     public int MS220 ;
+    public int MS230 ;
+    public int MS240 ;
+    public int MS245 ;
     public int MS250 ;
     public int MS300 ;
     public int MS360 ;
@@ -72,6 +75,9 @@ public class QRSDetectorParameters
         MS195         = ((int) (195/MS_PER_SAMPLE + 0.5)) ;
         MS200         = ((int) (200/MS_PER_SAMPLE + 0.5)) ;
         MS220         = ((int) (220/MS_PER_SAMPLE + 0.5)) ;
+        MS230         = ((int) (230/MS_PER_SAMPLE + 0.5)) ;
+        MS240         = ((int) (240/MS_PER_SAMPLE + 0.5)) ;
+        MS245         = ((int) (245/MS_PER_SAMPLE + 0.5)) ;
         MS250         = ((int) (250/MS_PER_SAMPLE + 0.5)) ;
         MS300         = ((int) (300/MS_PER_SAMPLE + 0.5)) ;
         MS360         = ((int) (360/MS_PER_SAMPLE + 0.5)) ;
@@ -81,7 +87,7 @@ public class QRSDetectorParameters
         DERIV_LENGTH  = MS10 ;
         LPBUFFER_LGTH = ((int) (2*MS25)) ;
         HPBUFFER_LGTH = MS125 ;
-        WINDOW_WIDTH  = MS80 ;
+        WINDOW_WIDTH  = 4 ;
     }
 
     public static class PreBlankParameters

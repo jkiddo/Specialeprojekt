@@ -83,7 +83,7 @@ public class QRSDetector2
     public QRSDetector2(QRSDetectorParameters qrsDetectorParameters)
     {
         qrsDetParas = qrsDetectorParameters;
-        preBlankParas = new PreBlankParameters(qrsDetectorParameters, qrsDetectorParameters.MS195) ;
+        preBlankParas = new PreBlankParameters(qrsDetectorParameters, qrsDetectorParameters.MS250) ;
         sbcount = qrsDetectorParameters.MS1500 ;
         DDBuffer = new int[preBlankParas.DER_DELAY] ;
         for(int i = 0; i < 8; ++i)

@@ -78,7 +78,7 @@ public class QRSFilterer {
         fdatum = lpfilt( datum ) ;  // Low pass filter data.
         fdatum = hpfilt( fdatum ) ; // High pass filter data.
         fdatum = deriv2( fdatum ) ; // Take the derivative.
-        fdatum = Math.abs(fdatum) ;	// Take the absolute value.
+//        fdatum = Math.abs(fdatum) ;	// Take the absolute value.
         fdatum = mvwint( fdatum ) ; // Average over an 80 ms window .
         return(fdatum) ;
     }

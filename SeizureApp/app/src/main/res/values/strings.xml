@@ -5,4 +5,6 @@
     <string name="title_healthMetrics">Health metrics</string>
     <string name="title_connections">Connection</string>
     <string name="BtnStudy1">Study 1:\nSave R-peaks</string>
+    <string name="Btn2Study1">Study 1:\nNew R-peak test</string>
+    <string name="BtnSeizureDetect">Study 3: \nSave Seizures</string>
 </resources>
