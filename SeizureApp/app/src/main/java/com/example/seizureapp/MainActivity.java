@@ -5,6 +5,7 @@ import android.widget.ArrayAdapter;
 
 import com.example.seizureapp.ui.home.HomeViewModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
@@ -22,10 +23,13 @@ public class MainActivity extends AppCompatActivity {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.navigation_home, R.id.navigation_healthMetrics, R.id.navigation_connections)
+                R.id.navigation_home, R.id.navigation_healthMetrics,
+                R.id.navigation_connections, R.id.navigation_testing)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
+
+//        navView.getMenu().findItem(R.id.navigation_testing).setVisible(false);
     }
 }

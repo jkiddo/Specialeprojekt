@@ -26,6 +26,6 @@
     <fragment
         android:id="@+id/navigation_testing"
         android:name="com.example.seizureapp.ui.testing.TestingFragment"
-        android:label="Testing"
+        android:label="@string/title_testing"
         tools:layout="@layout/fragment_testing"/>
 </navigation>
