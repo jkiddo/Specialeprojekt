@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">ASSURE</string>
+    <string name="btNotSupported">Bluetooth is not supported on this device</string>
+    <string name="btnDiscover">Discover devices</string>
+    <string name="status">Status: Disconnected</string>
+    <string name="subTitle">Automated Seizure Surveillance for Research in Epilepsy</string>
+    <string name="statusScanning">Status: Scanning for devices</string>
+    <string name="yourPersonalValues"><u>Your personalized values</u></string>
+    <string name="defaultModCSI">15000</string>
+    <string name="defaultCSI">10</string>
+    <string name="editValues">Edit</string>
 </resources>

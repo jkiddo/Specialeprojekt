@@ -272,7 +272,7 @@ public class TestingFragment extends Fragment {
                             }
                         }
 
-                        double[] y_axis = new double[mws]; // The y-axis is the heart rate in minutes
+                        double[] y_axis = new double[mws]; // The y-axis data is the heart rate in minutes
                         for (int j = 0; j < mws; ++j) {
                             y_axis[j] = 60/rrFiltered[j];
                         }

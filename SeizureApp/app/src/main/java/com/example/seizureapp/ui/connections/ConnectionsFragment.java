@@ -28,12 +28,6 @@ public class ConnectionsFragment extends Fragment {
                 new ViewModelProvider(this).get(ConnectionsViewModel.class);
         View root = inflater.inflate(R.layout.fragment_connections, container, false);
 
-//        final ListView listView = root.findViewById(R.id.devicesList);
-//        String[] names = {"Cortrium C3+", "Oliver"};
-//        int[] images = {R.drawable.connected, R.drawable.disconnected};
-//        ViewAdapter adapter = new ViewAdapter(this.getContext(), names, images);
-//        listView.setAdapter(adapter);
-
         ArrayList<String> devices = new ArrayList<>();
         devices.add("Cortrium C3+");
         devices.add("Oliver");
