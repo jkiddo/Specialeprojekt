@@ -24,7 +24,7 @@
         android:id="@+id/lvNewDevices"
         android:layout_width="match_parent"
         android:layout_height="250dp"
-        app:layout_constraintTop_toBottomOf="@id/btnDiscover"/>
+        app:layout_constraintTop_toBottomOf="@id/btnDiscover" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -116,11 +116,64 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/btneditValues"
+        android:id="@+id/btnEditValues"
+        android:onClick="btnEditValues"
         app:layout_constraintTop_toTopOf="@+id/label2"
         app:layout_constraintStart_toEndOf="@id/label3"
         android:layout_marginStart="40sp"
         android:text="@string/editValues"
         android:drawableLeft="@drawable/edit_text"
         />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/label4"
+        app:layout_constraintTop_toBottomOf="@id/tvModCSI"
+        android:text="@string/latestValues"
+        android:layout_marginStart="20sp"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="40sp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/label5"
+        app:layout_constraintStart_toStartOf="parent"
+        android:text="ModCSI"
+        android:textStyle="bold|italic"
+        android:layout_marginStart="20sp"
+        app:layout_constraintTop_toBottomOf="@id/label4"
+        android:layout_marginTop="10sp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/latestModCSI"
+        android:text="@string/waiting"
+        app:layout_constraintTop_toBottomOf="@id/label5"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="20sp"
+        android:layout_marginTop="10sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/label6"
+        android:text="CSI"
+        android:textStyle="bold|italic"
+        app:layout_constraintStart_toStartOf="@id/label3"
+        app:layout_constraintTop_toBottomOf="@id/label4"
+        android:layout_marginTop="10sp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/latestCSI"
+        android:text="@string/waiting"
+        app:layout_constraintStart_toStartOf="@id/label6"
+        app:layout_constraintTop_toBottomOf="@id/label6"
+        android:layout_marginTop="10sp"
+        />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

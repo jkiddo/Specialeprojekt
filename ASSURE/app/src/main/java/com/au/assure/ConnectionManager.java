@@ -437,9 +437,6 @@ public final class ConnectionManager {
                             Log.d("Device name OK : ",str);
                     }
                 }
-
-
-
                 //if (listener != null && result.getDevice().getName() != null && result.getDevice().getName().contains("C3-"))
                 if (listener != null && result.getDevice().getName() != null &&
                         ( result.getDevice().getName().startsWith("C3") || result.getDevice().getName().startsWith("B17") ) )

@@ -5,8 +5,15 @@
     <string name="status">Status: Disconnected</string>
     <string name="subTitle">Automated Seizure Surveillance for Research in Epilepsy</string>
     <string name="statusScanning">Status: Scanning for devices</string>
-    <string name="yourPersonalValues"><u>Your personalized values</u></string>
+    <string name="statusConnected">Status: Connected to device</string>
+    <string name="yourPersonalValues"><u>Your personal thresholds</u></string>
     <string name="defaultModCSI">15000</string>
     <string name="defaultCSI">10</string>
     <string name="editValues">Edit</string>
+    <string name="latestValues"><u>Latest observed values</u></string>
+    <string name="waiting">Waiting...</string>
+    <string name="changeThresh">Change your threshold values</string>
+    <string name="btnOK">OK</string>
+    <string name="btnCancel">Cancel</string>
+    <string name="inputError">Must input only numbers, decimal separator is a "."</string>
 </resources>

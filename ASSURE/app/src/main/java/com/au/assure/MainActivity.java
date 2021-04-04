@@ -2,6 +2,7 @@ package com.au.assure;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
@@ -30,7 +31,7 @@ import java.util.ArrayList;
 import static androidx.core.content.PermissionChecker.PERMISSION_DENIED;
 
 public class MainActivity extends AppCompatActivity
-        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener
+        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener, AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener
 {
     public ArrayList<BluetoothDevice> btDevices = new ArrayList<>();
     public DeviceListAdapter deviceListAdapter;
@@ -39,14 +40,18 @@ public class MainActivity extends AppCompatActivity
     int REQUEST_ENABLE_BT;
     ListView lvNewDevices;
     TextView tvStatus;
+    TextView tvModCSI;
+    TextView tvCSI;
     ConnectionManager m_ConnectionManager = null;
     ArrayList<CortriumC3> m_al_C3Devices;
     ArrayList<String> m_al_C3Names;
     BluetoothAdapter bluetoothAdapter;
     String m_strReconnect_DeviceName = null;
     int m_iC3DiscoveredCount = 0;
-
-    // Lifecycle methods
+    boolean bResult = false;
+    double ModCSIThresh;
+    double CSIThresh;
+    View listItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,12 +60,19 @@ public class MainActivity extends AppCompatActivity
 
         checkBTPermissions();
 
+        btDevices = new ArrayList<>();
         tvStatus = findViewById(R.id.lbStatus);
         lvNewDevices = (ListView) findViewById(R.id.lvNewDevices);
-        btDevices = new ArrayList<>();
+        lvNewDevices.setOnItemClickListener(MainActivity.this);
 
         m_al_C3Devices = new ArrayList<>();
         m_al_C3Names = new ArrayList<>();
+
+        ModCSIThresh = Double.parseDouble(getString(R.string.defaultModCSI));
+        CSIThresh = Double.parseDouble(getString(R.string.defaultCSI));
+
+        tvModCSI = findViewById(R.id.tvModCSI);
+        tvCSI = findViewById(R.id.tvCSI);
 
         // Ask user to enable bluetooth
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -76,8 +88,8 @@ public class MainActivity extends AppCompatActivity
         }
 
         // Register for broadcasts when a device is discovered.
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(broadcastReceiver1, filter);
+//        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+//        registerReceiver(broadcastReceiver1, filter);
     }
 
     @Override
@@ -86,7 +98,7 @@ public class MainActivity extends AppCompatActivity
         super.onDestroy();
 
         // Close potential Bluetooth connections
-        unregisterReceiver(broadcastReceiver1);
+//        unregisterReceiver(broadcastReceiver1);
         if( broadcastReceiver4!=null)
             unregisterReceiver(broadcastReceiver4);
         if( m_ConnectionManager != null ) {
@@ -98,17 +110,17 @@ public class MainActivity extends AppCompatActivity
 
     // Bluetooth
     // Create a BroadcastReceiver for ACTION_FOUND.
-    private final BroadcastReceiver broadcastReceiver1 = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (action.equals(BluetoothDevice.ACTION_FOUND)){
-                BluetoothDevice device = intent.getParcelableExtra (BluetoothDevice.EXTRA_DEVICE);
-                btDevices.add(device);
-                deviceListAdapter = new DeviceListAdapter(context, R.layout.device_list_adapter, btDevices);
-                lvNewDevices.setAdapter(deviceListAdapter);
-            }
-        }
-    };
+//    private final BroadcastReceiver broadcastReceiver1 = new BroadcastReceiver() {
+//        public void onReceive(Context context, Intent intent) {
+//            String action = intent.getAction();
+//            if (action.equals(BluetoothDevice.ACTION_FOUND)){
+//                BluetoothDevice device = intent.getParcelableExtra (BluetoothDevice.EXTRA_DEVICE);
+//                btDevices.add(device);
+//                deviceListAdapter = new DeviceListAdapter(context, R.layout.device_list_adapter, btDevices);
+//                lvNewDevices.setAdapter(deviceListAdapter);
+//            }
+//        }
+//    };
 
     public void btnDiscover(View view) {
         StartConnectionManager();
@@ -205,6 +217,14 @@ public class MainActivity extends AppCompatActivity
         m_ConnectionManager.stopScanning();
     }
 
+    @Override
+    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+        ConnectToDevice(i);
+        if (bResult)
+            view.setBackgroundColor(getColor(R.color.softGreen));
+        listItem = view;
+    }
+
     protected void ConnectToDevice(int i)
     {
         m_ConnectionManager.stopScanning();
@@ -220,8 +240,10 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "onItemClick: deviceName = " + deviceName);
         Log.d(TAG, "onItemClick: deviceAddress = " + deviceAddress);
 
-        boolean bResult = m_ConnectionManager.connect(m_al_C3Devices.get(i));
+        bResult = m_ConnectionManager.connect(m_al_C3Devices.get(i));
         Toast.makeText(this, "bResult = " + ( bResult?"true":"false"), Toast.LENGTH_SHORT).show();
+
+        tvStatus.setText(getString(R.string.statusConnected));
     }
 
     public void StartConnectionManager()
@@ -244,33 +266,9 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-
-    @Override
-    public void ecgDataUpdated(EcgData ecgData) {
-
-    }
-
-    @Override
-    public void modeRead(SensorMode sensorMode) {
-
-    }
-
-    @Override
-    public void deviceInformationRead(CortriumC3 device) {
-
-    }
-
     @Override
     public void startedScanning(ConnectionManager manager) {
         Log.d(TAG, "public void startedScanning(ConnectionManager manager)");
-    }
-
-    @Override
-    public void stoppedScanning(ConnectionManager manager) {
-        Log.d(TAG, "public void stoppedScanning(ConnectionManager manager)");
-
-        if( m_strReconnect_DeviceName != null )// If reconnect not in progress
-            StartConnectionManager();
     }
 
     @Override
@@ -306,12 +304,67 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void connectedToDevice(CortriumC3 device) {
+    public void ecgDataUpdated(EcgData ecgData) {
 
     }
 
     @Override
-    public void disconnectedFromDevice(CortriumC3 device) {
+    public void modeRead(SensorMode sensorMode) {
 
+    }
+
+    @Override
+    public void deviceInformationRead(CortriumC3 device) {
+
+    }
+
+    @Override
+    public void stoppedScanning(ConnectionManager manager) {
+        Log.d(TAG, "public void stoppedScanning(ConnectionManager manager)");
+
+        if( m_strReconnect_DeviceName != null )// If reconnect not in progress
+            StartConnectionManager();
+    }
+
+    @Override
+    public void connectedToDevice(CortriumC3 device) {
+        m_ConnectionManager.setEcgDataListener(this);
+
+        if( true ) {
+            CortriumC3 c3Device = m_ConnectionManager.getConnectedDevice();
+            String strName = c3Device.getName();
+            Log.i("JKN","DeviceName = " + strName );
+        }
+    }
+
+    @Override
+    public void disconnectedFromDevice(CortriumC3 device) {
+        tvStatus.setText(getString(R.string.status));
+        if (listItem != null)
+            listItem.setBackgroundColor(Color.WHITE);
+    }
+
+    public void btnEditValues(View view) {
+        // Create an instance of the dialog fragment and show it
+        DialogFragmentEditValues editValues = new DialogFragmentEditValues(ModCSIThresh, CSIThresh);
+        editValues.show(getSupportFragmentManager(), "editValues");
+    }
+
+    // The dialog fragment receives a reference to this Activity through the
+    // Fragment.onAttach() callback, which it uses to call the following methods
+    // defined by the NoticeDialogFragment.NoticeDialogListener interface
+    @Override
+    public void onDialogPositiveClick(double modCSI, double CSI) {
+        // User touched the dialog's positive button
+        ModCSIThresh = modCSI;
+        CSIThresh = CSI;
+
+        tvModCSI.setText(Double.toString(ModCSIThresh));
+        tvCSI.setText(Double.toString(CSIThresh));
+    }
+
+    @Override
+    public void onDialogNegativeClick() {
+        // User touched the dialog's negative button
     }
 }
