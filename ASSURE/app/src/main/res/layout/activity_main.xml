@@ -138,6 +138,15 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:id="@+id/latestUpdateTime"
+        app:layout_constraintStart_toEndOf="@id/label4"
+        app:layout_constraintTop_toTopOf="@+id/label4"
+        android:layout_marginStart="20sp"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:id="@+id/label5"
         app:layout_constraintStart_toStartOf="parent"
         android:text="ModCSI"

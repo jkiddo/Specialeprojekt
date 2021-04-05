@@ -11,6 +11,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.SensorEventListener;
@@ -25,8 +26,12 @@ import android.widget.Toast;
 
 import com.au.assure.datapackages.EcgData;
 import com.au.assure.datatypes.SensorMode;
+import com.au.assure.pantompkins.OSEAFactory;
+import com.au.assure.pantompkins.detection.QRSDetector2;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
 
 import static androidx.core.content.PermissionChecker.PERMISSION_DENIED;
 
@@ -42,6 +47,9 @@ public class MainActivity extends AppCompatActivity
     TextView tvStatus;
     TextView tvModCSI;
     TextView tvCSI;
+    TextView tvLatestModCSI;
+    TextView tvLatestCSI;
+    TextView tvTimestamp;
     ConnectionManager m_ConnectionManager = null;
     ArrayList<CortriumC3> m_al_C3Devices;
     ArrayList<String> m_al_C3Names;
@@ -51,28 +59,57 @@ public class MainActivity extends AppCompatActivity
     boolean bResult = false;
     double ModCSIThresh;
     double CSIThresh;
+    double defaultModCSI;
+    double defaultCSI;
+    double observedModCSI;
+    double observedCSI;
     View listItem;
+    int sampleRate; // ECG-device samplerate (Hz)
+    QRSDetector2 qrsDetector;
+    List<Integer> rPeakBuffer;
+    List<Double> rrIntervals;
+    SeizureDetector seizureDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        checkBTPermissions();
-
+        // Initialize variables
         btDevices = new ArrayList<>();
         tvStatus = findViewById(R.id.lbStatus);
-        lvNewDevices = (ListView) findViewById(R.id.lvNewDevices);
+        lvNewDevices = findViewById(R.id.lvNewDevices);
         lvNewDevices.setOnItemClickListener(MainActivity.this);
-
         m_al_C3Devices = new ArrayList<>();
         m_al_C3Names = new ArrayList<>();
-
-        ModCSIThresh = Double.parseDouble(getString(R.string.defaultModCSI));
-        CSIThresh = Double.parseDouble(getString(R.string.defaultCSI));
-
         tvModCSI = findViewById(R.id.tvModCSI);
         tvCSI = findViewById(R.id.tvCSI);
+        tvLatestModCSI = findViewById(R.id.latestModCSI);
+        tvLatestCSI = findViewById(R.id.latestCSI);
+        tvLatestCSI.setText(String.format(getResources().getString(R.string.waiting), 0));
+        tvLatestModCSI.setText(String.format(getResources().getString(R.string.waiting), 0));
+        tvTimestamp = findViewById(R.id.latestUpdateTime);
+        sampleRate = 256;
+        rPeakBuffer = new ArrayList<>();
+        rrIntervals = new ArrayList<>();
+        seizureDetector = new SeizureDetector();
+
+        // Initialize qrsDetector
+        qrsDetector = OSEAFactory.createQRSDetector2(sampleRate);
+
+        // Read stored thresholds
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        defaultModCSI = Double.parseDouble(getString(R.string.defaultModCSI));
+        defaultCSI = Double.parseDouble(getString(R.string.defaultCSI));
+        ModCSIThresh = sharedPref.getFloat("savedModCSI", (float) defaultModCSI);
+        CSIThresh = sharedPref.getFloat("savedCSI", (float) defaultCSI);
+
+        // Display stored thresholds
+        tvModCSI.setText(Double.toString(ModCSIThresh));
+        tvCSI.setText(Double.toString(CSIThresh));
+
+        // Below code is about enabling Bluetooth
+        checkBTPermissions();
 
         // Ask user to enable bluetooth
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -86,10 +123,6 @@ public class MainActivity extends AppCompatActivity
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
-
-        // Register for broadcasts when a device is discovered.
-//        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-//        registerReceiver(broadcastReceiver1, filter);
     }
 
     @Override
@@ -97,8 +130,6 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "onDestroy: called.");
         super.onDestroy();
 
-        // Close potential Bluetooth connections
-//        unregisterReceiver(broadcastReceiver1);
         if( broadcastReceiver4!=null)
             unregisterReceiver(broadcastReceiver4);
         if( m_ConnectionManager != null ) {
@@ -108,62 +139,9 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    // Bluetooth
-    // Create a BroadcastReceiver for ACTION_FOUND.
-//    private final BroadcastReceiver broadcastReceiver1 = new BroadcastReceiver() {
-//        public void onReceive(Context context, Intent intent) {
-//            String action = intent.getAction();
-//            if (action.equals(BluetoothDevice.ACTION_FOUND)){
-//                BluetoothDevice device = intent.getParcelableExtra (BluetoothDevice.EXTRA_DEVICE);
-//                btDevices.add(device);
-//                deviceListAdapter = new DeviceListAdapter(context, R.layout.device_list_adapter, btDevices);
-//                lvNewDevices.setAdapter(deviceListAdapter);
-//            }
-//        }
-//    };
-
     public void btnDiscover(View view) {
         StartConnectionManager();
-//        if(bluetoothAdapter.isDiscovering()){
-//            bluetoothAdapter.cancelDiscovery();
-//
-//            //check BT permissions in manifest
-//            checkBTPermissions();
-//
-//            bluetoothAdapter.startDiscovery();
-//            IntentFilter discoverDevicesIntent = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-//            registerReceiver(receiver, discoverDevicesIntent);
-//        }
-//        if(!bluetoothAdapter.isDiscovering()){
-//
-//            //check BT permissions in manifest
-//            checkBTPermissions();
-//
-//            bluetoothAdapter.startDiscovery();
-//            IntentFilter discoverDevicesIntent = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-//            registerReceiver(receiver, discoverDevicesIntent);
-//        }
     }
-
-//    /**
-//     * This method is required for all devices running API23+
-//     * Android must programmatically check the permissions for bluetooth. Putting the proper permissions
-//     * in the manifest is not enough.
-//     *
-//     * NOTE: This will only execute on versions > LOLLIPOP because it is not needed otherwise.
-//     */
-//    private void checkBTPermissions() {
-//        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP){
-//            int permissionCheck = this.checkSelfPermission("Manifest.permission.ACCESS_FINE_LOCATION");
-//            permissionCheck += this.checkSelfPermission("Manifest.permission.ACCESS_COARSE_LOCATION");
-//            if (permissionCheck != 0) {
-//
-//                this.requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1001); //Any number
-//            }
-//        }else{
-//            // No need to check permissions
-//        }
-//    }
 
     private void checkBTPermissions() {
         if(Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP){
@@ -305,7 +283,55 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void ecgDataUpdated(EcgData ecgData) {
+        int[] batch = ecgData.getFilteredEcg2Samples();
 
+        // Send the ECG data to R-peak analysis:
+        for (int i = 0; i < batch.length; i++) {
+            int result = qrsDetector.QRSDet(batch[i]);
+            if (result != 0) { // If R-peak is detected
+                rPeakBuffer.add(i-result);
+            }
+        }
+
+        // Making sure the buffer size is always 100 R-peaks
+        // The seizure detection has a 7 RR interval median filter, so an additional 7 intervals
+        // are needed
+        if (rPeakBuffer.size() > 107) {
+            rPeakBuffer.remove(rPeakBuffer.size()); // Remove last
+        }
+
+        if (rPeakBuffer.size() > 106) { // If the buffer is filled
+
+            // Convert indices to RR intervals in seconds
+            for (int i = 0; i < rPeakBuffer.size(); i++) {
+                rrIntervals.add((double) ((rPeakBuffer.get(i+1) - rPeakBuffer.get(i))) / sampleRate);
+            }
+
+            // Calculate CSI and ModCSI
+            double[] returnVals;
+            returnVals = seizureDetector.CalcModCSI_and_CSI(rrIntervals);
+            observedModCSI = returnVals[0];
+            observedCSI = returnVals[1];
+
+            // Check if the observed values are greater than the current thresholds
+            if (observedModCSI > ModCSIThresh || observedCSI > CSIThresh){
+                // Notification
+            }
+
+            // Update the UI with latest observed values
+            tvLatestModCSI.setText(String.format("%.3f",observedModCSI)); // with 3 decimals
+            tvLatestCSI.setText(String.format("%.3f",observedCSI));
+
+            // Update timestamp
+            tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+        }
+
+        // If not enough data RR intervals yet, update the UI with how far along the buffer is
+        if (rPeakBuffer.size() < 106) {
+            tvLatestCSI.setText(String.format(getResources().getString(R.string.waiting), (rPeakBuffer.size()/107)*100));
+            tvLatestModCSI.setText(String.format(getResources().getString(R.string.waiting), (rPeakBuffer.size()/107)*100));
+            tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+        }
     }
 
     @Override
@@ -354,17 +380,25 @@ public class MainActivity extends AppCompatActivity
     // Fragment.onAttach() callback, which it uses to call the following methods
     // defined by the NoticeDialogFragment.NoticeDialogListener interface
     @Override
-    public void onDialogPositiveClick(double modCSI, double CSI) {
-        // User touched the dialog's positive button
+    public void onDialogPositiveClick(double modCSI, double CSI) { // User touched the dialog's positive button
+        // Set the new values
         ModCSIThresh = modCSI;
         CSIThresh = CSI;
 
+        // Display the new values
         tvModCSI.setText(Double.toString(ModCSIThresh));
         tvCSI.setText(Double.toString(CSIThresh));
+
+        // Store the new thresholds
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putFloat("savedModCSI", (float) ModCSIThresh);
+        editor.putFloat("savedCSI", (float) CSIThresh);
+        editor.apply();
     }
 
     @Override
-    public void onDialogNegativeClick() {
-        // User touched the dialog's negative button
+    public void onDialogNegativeClick() { // User touched the dialog's negative button
+        // Cancelled
     }
 }

@@ -228,7 +228,7 @@ public class TestingFragment extends Fragment {
                         rrIntervals.add(Double.parseDouble(tokens[i]));
                     }
 
-                    int rrCounter = 0; // Counter for position of moving window (only relevant when reading file, otherwise this would be a memory leak)
+                    int rrCounter = 0; // Counter for position of moving window (only relevant when reading file)
                     int mws = 100; // Moving window size
                     // 107 R-R interval sliding window
                     for (int i = 0; i < rrIntervals.size() - (mws+7); i++) {
