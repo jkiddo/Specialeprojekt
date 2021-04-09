@@ -8,6 +8,7 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -15,14 +16,25 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.SensorEventListener;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.au.assure.datapackages.EcgData;
 import com.au.assure.datatypes.SensorMode;
@@ -42,6 +54,9 @@ public class MainActivity extends AppCompatActivity
     public DeviceListAdapter deviceListAdapter;
 
     private static final String TAG = "MainActivity";
+    private NotificationManagerCompat notificationManager;
+    public static final String CHANNEL_1_ID = "SeizureChannel";
+
     int REQUEST_ENABLE_BT;
     ListView lvNewDevices;
     TextView tvStatus;
@@ -69,6 +84,10 @@ public class MainActivity extends AppCompatActivity
     List<Integer> rPeakBuffer;
     List<Double> rrIntervals;
     SeizureDetector seizureDetector;
+    Uri uri;
+    NotificationChannel SystemChannel;
+    int sampleCounter;
+    int rrSinceSeizure;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,13 +105,14 @@ public class MainActivity extends AppCompatActivity
         tvCSI = findViewById(R.id.tvCSI);
         tvLatestModCSI = findViewById(R.id.latestModCSI);
         tvLatestCSI = findViewById(R.id.latestCSI);
-        tvLatestCSI.setText(String.format(getResources().getString(R.string.waiting), 0));
-        tvLatestModCSI.setText(String.format(getResources().getString(R.string.waiting), 0));
+        tvLatestCSI.setText(getResources().getString(R.string.waiting));
+        tvLatestModCSI.setText(getResources().getString(R.string.waiting));
         tvTimestamp = findViewById(R.id.latestUpdateTime);
         sampleRate = 256;
         rPeakBuffer = new ArrayList<>();
-        rrIntervals = new ArrayList<>();
         seizureDetector = new SeizureDetector();
+        sampleCounter = 0;
+        rrSinceSeizure = 100; //Default high value
 
         // Initialize qrsDetector
         qrsDetector = OSEAFactory.createQRSDetector2(sampleRate);
@@ -123,6 +143,14 @@ public class MainActivity extends AppCompatActivity
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
+
+        //Broadcasts when bond state changes (ie:pairing)
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        registerReceiver(broadcastReceiver4, filter);
+
+        // Initialize notification manager
+        createNotificationChannels();
+        notificationManager = NotificationManagerCompat.from(this);
     }
 
     @Override
@@ -284,27 +312,32 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void ecgDataUpdated(EcgData ecgData) {
         int[] batch = ecgData.getFilteredEcg2Samples();
+        sampleCounter = sampleCounter + 12; // Determines the number of samples since last R-peak
+        boolean newRpeak = false;
 
         // Send the ECG data to R-peak analysis:
         for (int i = 0; i < batch.length; i++) {
             int result = qrsDetector.QRSDet(batch[i]);
             if (result != 0) { // If R-peak is detected
-                rPeakBuffer.add(i-result);
+                rPeakBuffer.add(sampleCounter-12+i);
+                sampleCounter = 0;
+                newRpeak = true;
             }
         }
 
         // Making sure the buffer size is always 100 R-peaks
         // The seizure detection has a 7 RR interval median filter, so an additional 7 intervals
         // are needed
-        if (rPeakBuffer.size() > 107) {
-            rPeakBuffer.remove(rPeakBuffer.size()); // Remove last
+        if (newRpeak && rPeakBuffer.size() > 107) {
+            rPeakBuffer.remove(0); // Remove first R-peak
         }
 
-        if (rPeakBuffer.size() > 106) { // If the buffer is filled
+        if (newRpeak && rPeakBuffer.size() > 106) { // If the buffer is filled and new Rpeak
+            rrIntervals = new ArrayList<>();
 
-            // Convert indices to RR intervals in seconds
-            for (int i = 0; i < rPeakBuffer.size(); i++) {
-                rrIntervals.add((double) ((rPeakBuffer.get(i+1) - rPeakBuffer.get(i))) / sampleRate);
+            // Convert intervals in sample no. to intervals in seconds (RR intervals)
+            for (int i = 0; i < rPeakBuffer.size() - 1; i++) {
+                rrIntervals.add((double) rPeakBuffer.get(i) / sampleRate);
             }
 
             // Calculate CSI and ModCSI
@@ -315,22 +348,43 @@ public class MainActivity extends AppCompatActivity
 
             // Check if the observed values are greater than the current thresholds
             if (observedModCSI > ModCSIThresh || observedCSI > CSIThresh){
-                // Notification
+                if (rrSinceSeizure > 20){ // Makes sure notifications don't fly out every second
+                    sendNotificationOnChannel1(); // Notify about seizure
+                    rrSinceSeizure = 0;
+                }
             }
+            rrSinceSeizure++;
 
-            // Update the UI with latest observed values
-            tvLatestModCSI.setText(String.format("%.3f",observedModCSI)); // with 3 decimals
-            tvLatestCSI.setText(String.format("%.3f",observedCSI));
+            // Because this is a background thread, we must use a special method for updating the
+            // UI, which runs on the main thread
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    // Update the UI with latest observed values
+                    tvLatestModCSI.setText(String.format("%.3f",observedModCSI)); // with 3 decimals
+                    tvLatestCSI.setText(String.format("%.3f",observedCSI));
 
-            // Update timestamp
-            tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+                    // Update timestamp
+                    tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+                }
+            });
         }
 
         // If not enough data RR intervals yet, update the UI with how far along the buffer is
-        if (rPeakBuffer.size() < 106) {
-            tvLatestCSI.setText(String.format(getResources().getString(R.string.waiting), (rPeakBuffer.size()/107)*100));
-            tvLatestModCSI.setText(String.format(getResources().getString(R.string.waiting), (rPeakBuffer.size()/107)*100));
-            tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+        if (newRpeak && rPeakBuffer.size() < 107) {
+
+            // Because this is a background thread, we must use a special method for updating the
+            // UI, which runs on the main thread
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    double pct = (((double) rPeakBuffer.size())/107) *100;
+
+                    tvLatestCSI.setText(getResources().getString(R.string.waiting) + String.format("%.1f", pct) + "%");
+                    tvLatestModCSI.setText(getResources().getString(R.string.waiting) + String.format("%.1f", pct) + "%");
+                    tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+                }
+            });
         }
     }
 
@@ -401,4 +455,42 @@ public class MainActivity extends AppCompatActivity
     public void onDialogNegativeClick() { // User touched the dialog's negative button
         // Cancelled
     }
+
+    // Notification methods
+    private void createNotificationChannels() {
+        SystemChannel = new NotificationChannel(
+                CHANNEL_1_ID,
+                "SeizureChannel",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+
+        // Sound https://www.e2s.com/references-and-guidelines/listen-and-download-alarm-tones
+        uri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"+ getApplicationContext().getPackageName() + "/" + R.raw.tone15);
+        SystemChannel.setDescription("This is seizure channel");
+        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build();
+        SystemChannel.setSound(uri, audioAttributes);
+        SystemChannel.setVibrationPattern(new long[]{0, 8000});
+        SystemChannel.enableVibration(true);
+
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.createNotificationChannel(SystemChannel);
+    }
+
+    public void sendNotificationOnChannel1() {
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_1_ID)
+                .setSmallIcon(R.drawable.ic_exclamation_triangle_solid)
+                .setContentTitle(getString(R.string.seizureNotificationTitle))
+                .setContentText(getString(R.string.seizureNotificationDesc))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_SYSTEM)
+                .setColor(Color.RED)
+                .build();
+
+        notificationManager.notify(1,notification);
+    }
+
+
 }

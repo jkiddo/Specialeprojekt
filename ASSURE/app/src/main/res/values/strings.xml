@@ -11,9 +11,11 @@
     <string name="defaultCSI">10</string>
     <string name="editValues">Edit</string>
     <string name="latestValues"><u>Latest observed values</u></string>
-    <string name="waiting">Waiting… %1$d%%</string>
+    <string name="waiting">Waiting… </string>
     <string name="changeThresh">Change your threshold values</string>
     <string name="btnOK">OK</string>
     <string name="btnCancel">Cancel</string>
     <string name="inputError">Must input only numbers, decimal separator is a "."</string>
+    <string name="seizureNotificationTitle">SEIZURE</string>
+    <string name="seizureNotificationDesc">Be aware: Possible seizure detected</string>
 </resources>

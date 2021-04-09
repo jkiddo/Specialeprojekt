@@ -21,11 +21,11 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    private SensorManager m_SensorManager;
-    private Sensor m_SensorAccelerometer;
-
-    public ArrayList<CortriumC3> m_al_C3Devices;
-    public ArrayList<String> m_al_C3Names;
+//    private SensorManager m_SensorManager;
+//    private Sensor m_SensorAccelerometer;
+//
+//    public ArrayList<CortriumC3> m_al_C3Devices;
+//    public ArrayList<String> m_al_C3Names;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,13 +44,13 @@ public class MainActivity extends AppCompatActivity {
 
 //        navView.getMenu().findItem(R.id.navigation_testing).setVisible(false);
 
-        m_SensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        m_SensorAccelerometer = m_SensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        m_SensorManager.registerListener((SensorEventListener) MainActivity.this,m_SensorAccelerometer,SensorManager.SENSOR_DELAY_NORMAL);
-
-        getSupportActionBar().hide();
-
-        m_al_C3Devices = new ArrayList<>();
-        m_al_C3Names = new ArrayList<>();
+//        m_SensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+//        m_SensorAccelerometer = m_SensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+//        m_SensorManager.registerListener((SensorEventListener) MainActivity.this,m_SensorAccelerometer,SensorManager.SENSOR_DELAY_NORMAL);
+//
+//        getSupportActionBar().hide();
+//
+//        m_al_C3Devices = new ArrayList<>();
+//        m_al_C3Names = new ArrayList<>();
     }
 }

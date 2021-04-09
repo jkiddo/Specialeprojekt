@@ -22,7 +22,7 @@ public class SeizureDetector {
         // Filter - 7 R-R interval median filter
         double[] rrFiltered = new double[mws];
         int filterCounter = 0;
-        for (int j = 0; j < mws-7; j++) {
+        for (int j = 0; j < mws; j++) {
 
             double median;
             double[] filterBuffer = new double[7];
@@ -31,7 +31,7 @@ public class SeizureDetector {
             }
             Arrays.sort(filterBuffer); // Sorting the 7 values
 
-            if (filterBuffer.length % 2 == 0) // If devisable by 2 (always is, when size is 7)
+            if (filterBuffer.length % 2 == 0) // If devisable by 2
                 median = (filterBuffer[filterBuffer.length/2] + filterBuffer[filterBuffer.length/2 - 1])/2;
             else
                 median = filterBuffer[filterBuffer.length/2];
@@ -91,7 +91,7 @@ public class SeizureDetector {
         // Calculate SD1 - unfiltered
         double[] rrDiff_unFilt = new double[mws-1];
         for (int j = 0; j < mws-1; j++) {
-            rrDiff_unFilt[j] = rrIntervals.get(j + 7) - rrIntervals.get(j + 8);
+            rrDiff_unFilt[j] = rrIntervals.get(j + 6) - rrIntervals.get(j + 7);
         }
 
         for (int j = 0; j < mws-1; j++) {
@@ -103,7 +103,7 @@ public class SeizureDetector {
         // Calculate SD2 - unfiltered
         double[] rrSum_unFilt = new double[mws-1];
         for (int j = 0; j < mws-1; j++) {
-            rrSum_unFilt[j] = rrIntervals.get(j + 7) + rrIntervals.get(j + 8);
+            rrSum_unFilt[j] = rrIntervals.get(j + 6) + rrIntervals.get(j + 7);
         }
 
         for (int j = 0; j < mws-1; j++) {
