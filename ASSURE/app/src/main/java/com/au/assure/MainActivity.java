@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity
     private static final String TAG = "MainActivity";
     private NotificationManagerCompat notificationManager;
     public static final String CHANNEL_1_ID = "SeizureChannel";
+    public static final String CHANNEL_2_ID = "DisconnectChannel";
 
     int REQUEST_ENABLE_BT;
     ListView lvNewDevices;
@@ -85,7 +86,8 @@ public class MainActivity extends AppCompatActivity
     List<Double> rrIntervals;
     SeizureDetector seizureDetector;
     Uri uri;
-    NotificationChannel SystemChannel;
+    NotificationChannel SeizureChannel;
+    NotificationChannel DisconnectChannel;
     int sampleCounter;
     int rrSinceSeizure;
 
@@ -156,6 +158,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy: called.");
+        sendNotificationDisconnect();
         super.onDestroy();
 
         if( broadcastReceiver4!=null)
@@ -165,6 +168,8 @@ public class MainActivity extends AppCompatActivity
                 m_ConnectionManager.stopScanning();
             m_ConnectionManager.disconnect();
         }
+
+
     }
 
     public void btnDiscover(View view) {
@@ -349,7 +354,7 @@ public class MainActivity extends AppCompatActivity
             // Check if the observed values are greater than the current thresholds
             if (observedModCSI > ModCSIThresh || observedCSI > CSIThresh){
                 if (rrSinceSeizure > 20){ // Makes sure notifications don't fly out every second
-                    sendNotificationOnChannel1(); // Notify about seizure
+                    sendNotificationSeizure(); // Notify about seizure
                     rrSinceSeizure = 0;
                 }
             }
@@ -361,8 +366,8 @@ public class MainActivity extends AppCompatActivity
                 @Override
                 public void run() {
                     // Update the UI with latest observed values
-                    tvLatestModCSI.setText(String.format("%.3f",observedModCSI)); // with 3 decimals
-                    tvLatestCSI.setText(String.format("%.3f",observedCSI));
+                    tvLatestModCSI.setText(String.format("%.2f",observedModCSI)); // with 2 decimals
+                    tvLatestCSI.setText(String.format("%.2f",observedCSI));
 
                     // Update timestamp
                     tvTimestamp.setText(Calendar.getInstance().getTime().toString());
@@ -419,9 +424,15 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void disconnectedFromDevice(CortriumC3 device) {
-        tvStatus.setText(getString(R.string.status));
-        if (listItem != null)
-            listItem.setBackgroundColor(Color.WHITE);
+        sendNotificationDisconnect();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                tvStatus.setText(getString(R.string.status));
+                if (listItem != null)
+                    listItem.setBackgroundColor(Color.WHITE);
+            }
+        });
     }
 
     public void btnEditValues(View view) {
@@ -443,7 +454,7 @@ public class MainActivity extends AppCompatActivity
         tvModCSI.setText(Double.toString(ModCSIThresh));
         tvCSI.setText(Double.toString(CSIThresh));
 
-        // Store the new thresholds
+        // Store the new values for next time the app is opened
         SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putFloat("savedModCSI", (float) ModCSIThresh);
@@ -453,12 +464,12 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onDialogNegativeClick() { // User touched the dialog's negative button
-        // Cancelled
+        // Cancelled - nothing happens
     }
 
     // Notification methods
     private void createNotificationChannels() {
-        SystemChannel = new NotificationChannel(
+        SeizureChannel = new NotificationChannel(
                 CHANNEL_1_ID,
                 "SeizureChannel",
                 NotificationManager.IMPORTANCE_HIGH
@@ -466,20 +477,30 @@ public class MainActivity extends AppCompatActivity
 
         // Sound https://www.e2s.com/references-and-guidelines/listen-and-download-alarm-tones
         uri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"+ getApplicationContext().getPackageName() + "/" + R.raw.tone15);
-        SystemChannel.setDescription("This is seizure channel");
+        SeizureChannel.setDescription("This is seizure channel");
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .build();
-        SystemChannel.setSound(uri, audioAttributes);
-        SystemChannel.setVibrationPattern(new long[]{0, 8000});
-        SystemChannel.enableVibration(true);
+        SeizureChannel.setSound(uri, audioAttributes);
+        SeizureChannel.setVibrationPattern(new long[]{0, 8000});
+        SeizureChannel.enableVibration(true);
+
+        DisconnectChannel = new NotificationChannel(
+            CHANNEL_2_ID,
+            "DisconnectChannel",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+
+        DisconnectChannel.setDescription("This channel shows messages when device is disconnected");
+        DisconnectChannel.enableVibration(true);
 
         NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.createNotificationChannel(SystemChannel);
+        manager.createNotificationChannel(SeizureChannel);
+        manager.createNotificationChannel(DisconnectChannel);
     }
 
-    public void sendNotificationOnChannel1() {
+    public void sendNotificationSeizure() {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_1_ID)
                 .setSmallIcon(R.drawable.ic_exclamation_triangle_solid)
                 .setContentTitle(getString(R.string.seizureNotificationTitle))
@@ -488,9 +509,16 @@ public class MainActivity extends AppCompatActivity
                 .setCategory(NotificationCompat.CATEGORY_SYSTEM)
                 .setColor(Color.RED)
                 .build();
-
         notificationManager.notify(1,notification);
     }
 
-
+    public void sendNotificationDisconnect() {
+        Notification notification = new NotificationCompat.Builder(this,CHANNEL_2_ID)
+                .setContentTitle("Disconnected")
+                .setContentText("Disconnected from device")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_SYSTEM)
+                .build();
+        notificationManager.notify(2,notification);
+    }
 }

@@ -11,7 +11,7 @@
     <string name="defaultCSI">10</string>
     <string name="editValues">Edit</string>
     <string name="latestValues"><u>Latest observed values</u></string>
-    <string name="waiting">Waiting… </string>
+    <string name="waiting">Buffering… </string>
     <string name="changeThresh">Change your threshold values</string>
     <string name="btnOK">OK</string>
     <string name="btnCancel">Cancel</string>

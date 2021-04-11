@@ -81,12 +81,12 @@ class ServiceManager extends BluetoothGattCallback {
     private CortriumC3 mDevice;
     private Context mContext;
 
+    private Recorder recorder;
+
     enumCortriunDeviceType m_eDevice = enumCortriunDeviceType.DEFAULT;
 
     protected ServiceManager(ConnectionManager connectionManager) {
         mConnectionManager = connectionManager;
-
-//        m_sDebugSettings = singleton_DebugSettings.getInstance();
     }
 
     protected void updateBluetoothInfo(BluetoothAdapter adapter, BluetoothGatt gatt) {
@@ -96,6 +96,7 @@ class ServiceManager extends BluetoothGattCallback {
 
     protected void setContext(Context context) {
         mContext = context;
+        recorder = new Recorder(mContext);
     }
 
     protected void discoverServicesForDevice(CortriumC3 device) {
@@ -417,17 +418,11 @@ class ServiceManager extends BluetoothGattCallback {
                 Log.i("JKN", "Battery : " + fPercent + "%");
 
                 Vbat = (value * 1080) / 1024;
-                //Log.i("JKN","VBat Vbat = "+Vbat);
-//                if (m_sDebugSettings.m_GraphVBat != null)
-//                    m_sDebugSettings.m_GraphVBat.SetValue((float) (fVbat));
-//                singleton_Shared_Data sd = singleton_Shared_Data.getInstance();
-//                if (sd.m_vBatPer == null)
-//                    sd.Initialize_VBat(10, fPercent);
-//                if (sd != null) sd.m_vBatPer.SetValue(fPercent);
-//                if( m_sDebugSettings.m_GraphX!=null)
-                //                  m_sDebugSettings.m_GraphX.SetValue((float) (Vbat));
 
-                //to do : Series7->AddY(Vbat/100.0,' ', clRed);
+//                recorder = new Recorder(mContext);
+                recorder.saveBatteryInfo(fPercent);
+
+
             }
             if ((Events & 0x02) == 0x02)        //LOD event
             {
