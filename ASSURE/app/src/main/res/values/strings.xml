@@ -18,4 +18,6 @@
     <string name="inputError">Must input only numbers, decimal separator is a "."</string>
     <string name="seizureNotificationTitle">SEIZURE</string>
     <string name="seizureNotificationDesc">Be aware: Possible seizure detected</string>
+    <string name="batteryLevel">Device battery level</string>
+    <string name="logSettingsTitle">Change which information is logged</string>
 </resources>

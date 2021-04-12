@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16sp"
+    tools:ignore="UseSwitchCompatOrMaterialXml">
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:id="@+id/rl1"
+        >
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Log battery consumption"
+        android:layout_alignParentStart="true"
+        android:textStyle="bold"
+        android:id="@+id/tv1"
+        android:layout_centerVertical="true"/>
+
+    <Switch
+        android:id="@+id/swBattery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"/>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rl1"
+        android:id="@+id/rl2">
+
+        <View style="@style/Divider.Horizontal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Log Raw ECG data"
+            android:layout_alignParentStart="true"
+            android:textStyle="bold"
+            android:id="@+id/tv2"
+            android:layout_centerVertical="true"/>
+
+        <Switch
+            android:id="@+id/swRawECG"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"/>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rl2"
+        android:id="@+id/rl3">
+
+        <View style="@style/Divider.Horizontal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Log RR intervals"
+            android:layout_alignParentStart="true"
+            android:textStyle="bold"
+            android:id="@+id/tv3"
+            android:layout_centerVertical="true"/>
+
+        <Switch
+            android:id="@+id/swRR"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"/>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rl3"
+        android:id="@+id/rl4">
+
+        <View style="@style/Divider.Horizontal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Log ModCSI and CSI"
+            android:layout_alignParentStart="true"
+            android:textStyle="bold"
+            android:id="@+id/tv4"
+            android:layout_centerVertical="true"/>
+
+        <Switch
+            android:id="@+id/swSeizure"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"/>
+    </RelativeLayout>
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

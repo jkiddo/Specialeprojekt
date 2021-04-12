@@ -48,7 +48,7 @@ import java.util.List;
 import static androidx.core.content.PermissionChecker.PERMISSION_DENIED;
 
 public class MainActivity extends AppCompatActivity
-        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener, AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener
+        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener, AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener, DialogFragmentLogSettings.NoticeDialogListener
 {
     public ArrayList<BluetoothDevice> btDevices = new ArrayList<>();
     public DeviceListAdapter deviceListAdapter;
@@ -90,6 +90,10 @@ public class MainActivity extends AppCompatActivity
     NotificationChannel DisconnectChannel;
     int sampleCounter;
     int rrSinceSeizure;
+    boolean logBattery = false;
+    boolean logRawECG = false;
+    boolean logRRintervals = false;
+    boolean logSeizureVals = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,12 +129,15 @@ public class MainActivity extends AppCompatActivity
         defaultCSI = Double.parseDouble(getString(R.string.defaultCSI));
         ModCSIThresh = sharedPref.getFloat("savedModCSI", (float) defaultModCSI);
         CSIThresh = sharedPref.getFloat("savedCSI", (float) defaultCSI);
+        logBattery = sharedPref.getBoolean("logBattery", logBattery);
+        logRawECG = sharedPref.getBoolean("logRawECG", logRawECG);
+        logRRintervals = sharedPref.getBoolean("logRRintervals", logRRintervals);
+        logSeizureVals = sharedPref.getBoolean("logSeizureVals", logSeizureVals);
 
         // Display stored thresholds
         tvModCSI.setText(Double.toString(ModCSIThresh));
         tvCSI.setText(Double.toString(CSIThresh));
 
-        // Below code is about enabling Bluetooth
         checkBTPermissions();
 
         // Ask user to enable bluetooth
@@ -520,5 +527,28 @@ public class MainActivity extends AppCompatActivity
                 .setCategory(NotificationCompat.CATEGORY_SYSTEM)
                 .build();
         notificationManager.notify(2,notification);
+    }
+
+    public void btnLogSettings(View view) {
+        // Create an instance of the dialog fragment and show it
+        DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery,logRawECG,logRRintervals,logSeizureVals);
+        logSettings.show(getSupportFragmentManager(), "logSettings");
+    }
+
+    @Override
+    public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals) {
+        this.logBattery = logBattery;
+        this.logRawECG = logRawECG;
+        this.logRRintervals = logRRintervals;
+        this.logSeizureVals = logSeizureVals;
+
+        // Store the new values for next time the app is opened
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putBoolean("logBattery", logBattery);
+        editor.putBoolean("logRawECG", logRawECG);
+        editor.putBoolean("logRRintervals", logRRintervals);
+        editor.putBoolean("logSeizureVals", logSeizureVals);
+        editor.apply();
     }
 }

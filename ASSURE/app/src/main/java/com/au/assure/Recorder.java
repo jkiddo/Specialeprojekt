@@ -21,7 +21,7 @@ public class Recorder {
     String filenameBat;
     String m_strRoot;
 
-    public Recorder(Context context) {
+    public Recorder() {
         Reset();
 
         Calendar cal = Calendar.getInstance();
@@ -30,8 +30,6 @@ public class Recorder {
         date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
         String currentTime = date.format(currentLocalTime);
 
-        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        batteryStatus = context.registerReceiver(null, ifilter);
         filenameBat = "Batterylog_" + currentTime + ".txt";
     }
 
@@ -56,7 +54,10 @@ public class Recorder {
         return m_strRoot + "/" + filenameBat;
     }
 
-    public void saveBatteryInfo(float c3BatPct) {
+    public void saveBatteryInfo(float c3BatPct, Context context) {
+        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        batteryStatus = context.registerReceiver(null, ifilter);
+
         // Determine phone battery percentage
         int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
         int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);

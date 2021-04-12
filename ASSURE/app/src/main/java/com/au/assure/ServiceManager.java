@@ -96,7 +96,7 @@ class ServiceManager extends BluetoothGattCallback {
 
     protected void setContext(Context context) {
         mContext = context;
-        recorder = new Recorder(mContext);
+        recorder = new Recorder();
     }
 
     protected void discoverServicesForDevice(CortriumC3 device) {
@@ -420,7 +420,7 @@ class ServiceManager extends BluetoothGattCallback {
                 Vbat = (value * 1080) / 1024;
 
 //                recorder = new Recorder(mContext);
-                recorder.saveBatteryInfo(fPercent);
+                recorder.saveBatteryInfo(fPercent, mContext);
 
 
             }
