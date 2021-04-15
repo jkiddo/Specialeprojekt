@@ -1,10 +1,8 @@
 package com.au.assure;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.DialogFragment;
-
 import android.Manifest;
+import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -13,17 +11,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.hardware.SensorEventListener;
 import android.media.AudioAttributes;
-import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -47,12 +40,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
-
-import static androidx.core.content.PermissionChecker.PERMISSION_DENIED;
 
 public class MainActivity extends AppCompatActivity
-        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener, AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener, DialogFragmentLogSettings.NoticeDialogListener, ConnectionManager.BatteryDataListener
+        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener
+        , AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener
+        , DialogFragmentLogSettings.NoticeDialogListener, ConnectionManager.BatteryDataListener
 {
     public ArrayList<BluetoothDevice> btDevices = new ArrayList<>();
     public DeviceListAdapter deviceListAdapter;
@@ -98,11 +90,12 @@ public class MainActivity extends AppCompatActivity
     boolean logRawECG = false;
     boolean logRRintervals = false;
     boolean logSeizureVals = false;
-    boolean logSeizure = false;
+    boolean logSeizure = true;
     boolean logThresholdChanges = false;
     TextView tvMaxTimestamp;
     TextView tvMaxModCSI;
     TextView tvMaxCSI;
+    TextView tvBatteryLevel;
     double maxModCSI;
     double maxCSI;
     Recorder recorder;
@@ -132,6 +125,7 @@ public class MainActivity extends AppCompatActivity
         tvMaxTimestamp = findViewById(R.id.maxUpdateTime);
         tvMaxModCSI = findViewById(R.id.maxModCSI);
         tvMaxCSI = findViewById(R.id.maxCSI);
+        tvBatteryLevel = findViewById(R.id.tvBatteryLevel);
         maxModCSI = 0;
         maxCSI = 0;
         recorder = new Recorder();
@@ -350,6 +344,7 @@ public class MainActivity extends AppCompatActivity
 
 
         sampleCounter = sampleCounter + 12; // Determines the number of samples since last R-peak
+        // It is useful for calculating the RR interval.
         boolean newRpeak = false;
 
         // Send the ECG data to R-peak analysis:
@@ -369,12 +364,19 @@ public class MainActivity extends AppCompatActivity
             rPeakBuffer.remove(0); // Remove first R-peak
         }
 
-        if (newRpeak && rPeakBuffer.size() > 106) { // If the buffer is filled and new Rpeak
+        // If the buffer is filled and new a new Rpeak is detected. This is where the
+        // seizure detection algorithm is used.
+        if (newRpeak && rPeakBuffer.size() > 106) {
             rrIntervals = new ArrayList<>();
 
             // Convert intervals in sample no. to intervals in seconds (RR intervals)
             for (int i = 0; i < rPeakBuffer.size() - 1; i++) {
                 rrIntervals.add((double) rPeakBuffer.get(i) / sampleRate);
+            }
+
+            // Log the RR intervals if the user has chose to do so
+            if (logRRintervals) {
+                recorder.saveRRintervals(rrIntervals.get(rrIntervals.size()-1));
             }
 
             // Calculate CSI and ModCSI
@@ -392,6 +394,11 @@ public class MainActivity extends AppCompatActivity
             }
             rrSinceSeizure++;
 
+            // Log the values if the user has chosen to do so
+            if (logSeizureVals){
+                recorder.saveModCSIandCSI(observedModCSI,observedCSI);
+            }
+
             // Because this is a background thread, we must use a special method for updating the
             // UI, which runs on the main thread
             runOnUiThread(new Runnable() {
@@ -405,7 +412,6 @@ public class MainActivity extends AppCompatActivity
                     Calendar cal = Calendar.getInstance();
                     Date currentLocalTime = cal.getTime();
                     DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                    date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
                     String currentTime = date.format(currentLocalTime);
 
                     // Update timestamp
@@ -423,7 +429,6 @@ public class MainActivity extends AppCompatActivity
                         Calendar cal = Calendar.getInstance();
                         Date currentLocalTime = cal.getTime();
                         DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                        date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
                         String currentTime = date.format(currentLocalTime);
                         tvMaxTimestamp.setText(currentTime);
                     }
@@ -438,7 +443,6 @@ public class MainActivity extends AppCompatActivity
                         Calendar cal = Calendar.getInstance();
                         Date currentLocalTime = cal.getTime();
                         DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                        date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
                         String currentTime = date.format(currentLocalTime);
                         tvMaxTimestamp.setText(currentTime);
                     }
@@ -461,7 +465,6 @@ public class MainActivity extends AppCompatActivity
                     Calendar cal = Calendar.getInstance();
                     Date currentLocalTime = cal.getTime();
                     DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                    date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
                     String currentTime = date.format(currentLocalTime);
                     tvTimestamp.setText(currentTime);
                 }
@@ -516,6 +519,7 @@ public class MainActivity extends AppCompatActivity
         // Create an instance of the dialog fragment and show it
         DialogFragmentEditValues editValues = new DialogFragmentEditValues(ModCSIThresh, CSIThresh);
         editValues.show(getSupportFragmentManager(), "editValues");
+        sendNotificationSeizure();
     }
 
     // The dialog fragment receives a reference to this Activity through the
@@ -553,7 +557,8 @@ public class MainActivity extends AppCompatActivity
         );
 
         // Sound https://www.e2s.com/references-and-guidelines/listen-and-download-alarm-tones
-        uri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"+ getApplicationContext().getPackageName() + "/" + R.raw.tone15);
+        uri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"+ getApplicationContext().getPackageName()
+                + "/" + R.raw.tone15);
         SeizureChannel.setDescription("This is seizure channel");
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -577,7 +582,35 @@ public class MainActivity extends AppCompatActivity
         manager.createNotificationChannel(DisconnectChannel);
     }
 
+    private final BroadcastReceiver seizureNegReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String a = "a";
+        }
+    };
+
     public void sendNotificationSeizure() {
+
+        // If logging is enable by user, log the time of the seizure
+        if (logSeizure){
+            recorder.saveSeizures();
+        }
+
+        // This intent makes it possible to open the app by pressing the notification
+        Intent activityIntent = new Intent(this, MainActivity.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(this,
+                0, activityIntent, 0);
+
+        // This intent is used for when the user presses YES to the seizure notification
+        Intent posIntent = new Intent(this, SeizureReceiverPositive.class);
+        PendingIntent actionPosIntent = PendingIntent.getBroadcast(this,
+                0,posIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // This intent is used for when the user presses NO to the seizure notificaiton
+        Intent negIntent = new Intent(this, SeizureReceiverNegative.class);
+        PendingIntent actionNegIntent = PendingIntent.getBroadcast(this,
+                0,negIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_1_ID)
                 .setSmallIcon(R.drawable.ic_exclamation_triangle_solid)
                 .setContentTitle(getString(R.string.seizureNotificationTitle))
@@ -585,6 +618,10 @@ public class MainActivity extends AppCompatActivity
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_SYSTEM)
                 .setColor(Color.RED)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentIntent(contentIntent)
+                .addAction(R.mipmap.ic_launcher,"YES",actionPosIntent)
+                .addAction(R.mipmap.ic_launcher,"NO",actionNegIntent)
                 .build();
         notificationManager.notify(1,notification);
     }
@@ -602,12 +639,14 @@ public class MainActivity extends AppCompatActivity
 
     public void btnLogSettings(View view) {
         // Create an instance of the dialog fragment and show it
-        DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery,logRawECG,logRRintervals,logSeizureVals,logSeizure,logThresholdChanges);
+        DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery,logRawECG,logRRintervals,
+                logSeizureVals,logSeizure,logThresholdChanges);
         logSettings.show(getSupportFragmentManager(), "logSettings");
     }
 
     @Override
-    public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
+    public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals,
+                                      boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
         this.logBattery = logBattery;
         this.logRawECG = logRawECG;
         this.logRRintervals = logRRintervals;
@@ -656,11 +695,17 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void batteryPercentUpdated(float percent) {
+        // If the battery level should be logged
         if (logBattery) {
             recorder.saveBatteryInfo(percent,getApplicationContext());
         }
 
         // And update UI
-
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                tvBatteryLevel.setText(percent + "%");
+            }
+        });
     }
 }

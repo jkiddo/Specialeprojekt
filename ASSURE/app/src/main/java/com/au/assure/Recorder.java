@@ -22,11 +22,14 @@ public class Recorder {
     String rootBat;
     String filenameCSI;
     String rootCSI;
+    String filenameModCSI;
+    String rootModCSI;
     String filenameECG;
     String rootECG;
     String filenameRR;
     String rootRR;
     String filenameSeizure;
+    String filenameSeizureMark;
     String rootSeizure;
     String filenameThresh;
     String rootThresh;
@@ -39,16 +42,16 @@ public class Recorder {
         Calendar cal = Calendar.getInstance();
         Date currentLocalTime = cal.getTime();
         DateFormat date = new SimpleDateFormat("dd.MM.yy_HH.mm");
-        date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
         String currentTime = date.format(currentLocalTime);
 
         filenameBat = "Battery_log_" + currentTime + ".txt";
-        filenameCSI = "ModCSI_and_CSI_log_" + currentTime + ".txt";
+        filenameCSI = "CSI_log_" + currentTime + ".txt";
+        filenameModCSI = "ModCSI_log_" + currentTime + ".txt";
         filenameECG = "ECG_log_" + currentTime + ".txt";
         filenameRR = "RR_log_" + currentTime + ".txt";
         filenameSeizure = "Seizures_log_" + currentTime + ".txt";
+        filenameSeizureMark = "Seizure_marks_" + currentTime + ".txt";
         filenameThresh = "Thresholdchanges_log_" + currentTime + ".txt";
-
     }
 
     private void Reset() {
@@ -61,6 +64,7 @@ public class Recorder {
 
         rootBat = m_strRoot + "/Battery logs";
         rootCSI = m_strRoot + "/ModCSI and CSI logs";
+        rootModCSI = rootCSI;
         rootECG = m_strRoot + "/ECG data logs";
         rootRR = m_strRoot + "/RR intervals logs";
         rootSeizure = m_strRoot + "/Seizure logs";
@@ -110,6 +114,13 @@ public class Recorder {
         return rootCSI + "/" + filenameCSI;
     }
 
+    private String GetSavePathModCSILog() {
+        if (rootModCSI == null)
+            return ("/sdcard/" + filenameModCSI);
+
+        return rootModCSI + "/" + filenameModCSI;
+    }
+
     private String GetSavePathECGLog() {
         if (rootECG == null)
             return ("/sdcard/" + filenameECG);
@@ -129,6 +140,13 @@ public class Recorder {
             return ("/sdcard/" + filenameSeizure);
 
         return rootSeizure + "/" + filenameSeizure;
+    }
+
+    private String GetSavePathSeizureMarkLog() {
+        if (rootSeizure == null)
+            return ("/sdcard/" + filenameSeizureMark);
+
+        return rootSeizure + "/" + filenameSeizureMark;
     }
 
     private String GetSavePathThreshLog() {
@@ -171,8 +189,39 @@ public class Recorder {
         }
     }
 
-    public void saveModCSIandCSI() {
+    public void saveModCSIandCSI(double modCSI, double CSI) {
+        String str_modCSI = modCSI + ",";
+        String str_CSI = CSI + ",";
 
+        FileOutputStream fosModCSI;
+        File fileModCSI = new File(GetSavePathModCSILog());
+        try {
+            fileModCSI.createNewFile();
+            fosModCSI = new FileOutputStream(fileModCSI,true);
+
+            if (fosModCSI != null) {
+                fosModCSI.write(str_modCSI.getBytes());
+                fileModCSI.getTotalSpace();
+                fosModCSI.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        FileOutputStream fosCSI;
+        File fileCSI = new File(GetSavePathCSILog());
+        try {
+            fileCSI.createNewFile();
+            fosCSI = new FileOutputStream(fileCSI,true);
+
+            if (fosCSI != null) {
+                fosCSI.write(str_CSI.getBytes());
+                fileCSI.getTotalSpace();
+                fosCSI.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void saveRawECG(int[] batch) {
@@ -200,12 +249,81 @@ public class Recorder {
         }
     }
 
-    public void saveRRintervals() {
+    public void saveRRintervals(double rrInterval) {
+        String str_rr = rrInterval + ",";
 
+        FileOutputStream fos;
+        File file = new File(GetSavePathRRLog());
+        try {
+            file.createNewFile();
+            fos = new FileOutputStream(file,true);
+
+            if (file != null) {
+                fos.write(str_rr.getBytes());
+                file.getTotalSpace();
+                fos.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void saveSeizures() {
+        Calendar cal = Calendar.getInstance();
+        Date currentLocalTime = cal.getTime();
+        DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+        String currentTime = date.format(currentLocalTime);
 
+        String str = "Seizure alarm triggered at: " + currentTime;
+        str = str + "\n";
+
+        FileOutputStream fos;
+        File file = new File(GetSavePathSeizureLog());
+        try {
+            file.createNewFile();
+            fos = new FileOutputStream(file,true);
+
+            if (file != null) {
+                fos.write(str.getBytes());
+                file.getTotalSpace();
+                fos.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void saveSeizureFeedback(boolean positive) {
+        Calendar cal = Calendar.getInstance();
+        Date currentLocalTime = cal.getTime();
+        DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+        String currentTime = date.format(currentLocalTime);
+
+        String str = "";
+
+        if (positive) {
+            str = str + "User marked latest seizure as a true positive detection at " + currentTime;
+        }
+        if (!positive) {
+            str = str + "User marked latest seizure as a false positive detection at " + currentTime;
+        }
+
+        str = str + "\n";
+
+        FileOutputStream fos;
+        File file = new File(GetSavePathSeizureMarkLog());
+        try {
+            file.createNewFile();
+            fos = new FileOutputStream(file,true);
+
+            if (file != null) {
+                fos.write(str.getBytes());
+                file.getTotalSpace();
+                fos.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void saveThresholdChange() {
