@@ -41,14 +41,18 @@ import com.au.assure.datatypes.SensorMode;
 import com.au.assure.pantompkins.OSEAFactory;
 import com.au.assure.pantompkins.detection.QRSDetector2;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import static androidx.core.content.PermissionChecker.PERMISSION_DENIED;
 
 public class MainActivity extends AppCompatActivity
-        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener, AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener, DialogFragmentLogSettings.NoticeDialogListener
+        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener, AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener, DialogFragmentLogSettings.NoticeDialogListener, ConnectionManager.BatteryDataListener
 {
     public ArrayList<BluetoothDevice> btDevices = new ArrayList<>();
     public DeviceListAdapter deviceListAdapter;
@@ -94,6 +98,14 @@ public class MainActivity extends AppCompatActivity
     boolean logRawECG = false;
     boolean logRRintervals = false;
     boolean logSeizureVals = false;
+    boolean logSeizure = false;
+    boolean logThresholdChanges = false;
+    TextView tvMaxTimestamp;
+    TextView tvMaxModCSI;
+    TextView tvMaxCSI;
+    double maxModCSI;
+    double maxCSI;
+    Recorder recorder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,14 +123,18 @@ public class MainActivity extends AppCompatActivity
         tvCSI = findViewById(R.id.tvCSI);
         tvLatestModCSI = findViewById(R.id.latestModCSI);
         tvLatestCSI = findViewById(R.id.latestCSI);
-        tvLatestCSI.setText(getResources().getString(R.string.waiting));
-        tvLatestModCSI.setText(getResources().getString(R.string.waiting));
         tvTimestamp = findViewById(R.id.latestUpdateTime);
         sampleRate = 256;
         rPeakBuffer = new ArrayList<>();
         seizureDetector = new SeizureDetector();
         sampleCounter = 0;
         rrSinceSeizure = 100; //Default high value
+        tvMaxTimestamp = findViewById(R.id.maxUpdateTime);
+        tvMaxModCSI = findViewById(R.id.maxModCSI);
+        tvMaxCSI = findViewById(R.id.maxCSI);
+        maxModCSI = 0;
+        maxCSI = 0;
+        recorder = new Recorder();
 
         // Initialize qrsDetector
         qrsDetector = OSEAFactory.createQRSDetector2(sampleRate);
@@ -133,6 +149,8 @@ public class MainActivity extends AppCompatActivity
         logRawECG = sharedPref.getBoolean("logRawECG", logRawECG);
         logRRintervals = sharedPref.getBoolean("logRRintervals", logRRintervals);
         logSeizureVals = sharedPref.getBoolean("logSeizureVals", logSeizureVals);
+        logSeizure = sharedPref.getBoolean("logSeizure", logSeizure);
+        logThresholdChanges = sharedPref.getBoolean("logThresh",logThresholdChanges);
 
         // Display stored thresholds
         tvModCSI.setText(Double.toString(ModCSIThresh));
@@ -324,6 +342,13 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void ecgDataUpdated(EcgData ecgData) {
         int[] batch = ecgData.getFilteredEcg2Samples();
+
+        // If the raw data should be logged
+        if (logRawECG) {
+            recorder.saveRawECG(batch);
+        }
+
+
         sampleCounter = sampleCounter + 12; // Determines the number of samples since last R-peak
         boolean newRpeak = false;
 
@@ -360,7 +385,7 @@ public class MainActivity extends AppCompatActivity
 
             // Check if the observed values are greater than the current thresholds
             if (observedModCSI > ModCSIThresh || observedCSI > CSIThresh){
-                if (rrSinceSeizure > 20){ // Makes sure notifications don't fly out every second
+                if (rrSinceSeizure > 100){ // Makes sure notifications don't fly out every second
                     sendNotificationSeizure(); // Notify about seizure
                     rrSinceSeizure = 0;
                 }
@@ -376,10 +401,49 @@ public class MainActivity extends AppCompatActivity
                     tvLatestModCSI.setText(String.format("%.2f",observedModCSI)); // with 2 decimals
                     tvLatestCSI.setText(String.format("%.2f",observedCSI));
 
+
+                    Calendar cal = Calendar.getInstance();
+                    Date currentLocalTime = cal.getTime();
+                    DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+                    date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
+                    String currentTime = date.format(currentLocalTime);
+
                     // Update timestamp
-                    tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+                    tvTimestamp.setText(currentTime);
                 }
             });
+
+            // Check if this observation is larger than the currently largest observation
+            if (observedModCSI > maxModCSI) {
+                maxModCSI = observedModCSI;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        tvMaxModCSI.setText(String.format("%.2f",maxModCSI));
+                        Calendar cal = Calendar.getInstance();
+                        Date currentLocalTime = cal.getTime();
+                        DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+                        date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
+                        String currentTime = date.format(currentLocalTime);
+                        tvMaxTimestamp.setText(currentTime);
+                    }
+                });
+            }
+            if (observedCSI > maxCSI) {
+                maxCSI = observedCSI;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        tvMaxCSI.setText(String.format("%.2f",maxCSI));
+                        Calendar cal = Calendar.getInstance();
+                        Date currentLocalTime = cal.getTime();
+                        DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+                        date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
+                        String currentTime = date.format(currentLocalTime);
+                        tvMaxTimestamp.setText(currentTime);
+                    }
+                });
+            }
         }
 
         // If not enough data RR intervals yet, update the UI with how far along the buffer is
@@ -394,7 +458,12 @@ public class MainActivity extends AppCompatActivity
 
                     tvLatestCSI.setText(getResources().getString(R.string.waiting) + String.format("%.1f", pct) + "%");
                     tvLatestModCSI.setText(getResources().getString(R.string.waiting) + String.format("%.1f", pct) + "%");
-                    tvTimestamp.setText(Calendar.getInstance().getTime().toString());
+                    Calendar cal = Calendar.getInstance();
+                    Date currentLocalTime = cal.getTime();
+                    DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+                    date.setTimeZone(TimeZone.getTimeZone("GMT+1:00"));
+                    String currentTime = date.format(currentLocalTime);
+                    tvTimestamp.setText(currentTime);
                 }
             });
         }
@@ -421,6 +490,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void connectedToDevice(CortriumC3 device) {
         m_ConnectionManager.setEcgDataListener(this);
+        m_ConnectionManager.setBatteryDataListener(this);
 
         if( true ) {
             CortriumC3 c3Device = m_ConnectionManager.getConnectedDevice();
@@ -521,6 +591,7 @@ public class MainActivity extends AppCompatActivity
 
     public void sendNotificationDisconnect() {
         Notification notification = new NotificationCompat.Builder(this,CHANNEL_2_ID)
+                .setSmallIcon(R.drawable.ic_exclamation_triangle_solid)
                 .setContentTitle("Disconnected")
                 .setContentText("Disconnected from device")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -531,16 +602,18 @@ public class MainActivity extends AppCompatActivity
 
     public void btnLogSettings(View view) {
         // Create an instance of the dialog fragment and show it
-        DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery,logRawECG,logRRintervals,logSeizureVals);
+        DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery,logRawECG,logRRintervals,logSeizureVals,logSeizure,logThresholdChanges);
         logSettings.show(getSupportFragmentManager(), "logSettings");
     }
 
     @Override
-    public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals) {
+    public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
         this.logBattery = logBattery;
         this.logRawECG = logRawECG;
         this.logRRintervals = logRRintervals;
         this.logSeizureVals = logSeizureVals;
+        this.logSeizure = logSeizure;
+        this.logThresholdChanges = logThresholdChanges;
 
         // Store the new values for next time the app is opened
         SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
@@ -549,6 +622,45 @@ public class MainActivity extends AppCompatActivity
         editor.putBoolean("logRawECG", logRawECG);
         editor.putBoolean("logRRintervals", logRRintervals);
         editor.putBoolean("logSeizureVals", logSeizureVals);
+        editor.putBoolean("logSeizure", logSeizure);
+        editor.putBoolean("logThresh", logThresholdChanges);
         editor.apply();
+    }
+
+    public void btnResetValues(View view) {
+        maxModCSI = 0;
+        maxCSI = 0;
+    }
+
+    boolean doubleBackToExitPressedOnce = false;
+
+    // Make sure to warn the user before using the back button to terminate activity
+    @Override
+    public void onBackPressed() {
+        if (doubleBackToExitPressedOnce) {
+            super.onBackPressed();
+            return;
+        }
+
+        this.doubleBackToExitPressedOnce = true;
+        Toast.makeText(this, R.string.pressBackAgainToExit, Toast.LENGTH_SHORT).show();
+
+        new Handler().postDelayed(new Runnable() {
+
+            @Override
+            public void run() {
+                doubleBackToExitPressedOnce=false;
+            }
+        }, 2000);
+    }
+
+    @Override
+    public void batteryPercentUpdated(float percent) {
+        if (logBattery) {
+            recorder.saveBatteryInfo(percent,getApplicationContext());
+        }
+
+        // And update UI
+
     }
 }

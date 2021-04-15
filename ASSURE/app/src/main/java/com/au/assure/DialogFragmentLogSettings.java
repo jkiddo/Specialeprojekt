@@ -18,19 +18,23 @@ public class DialogFragmentLogSettings extends DialogFragment {
     boolean logRawECG;
     boolean logRRintervals;
     boolean logSeizureVals;
+    boolean logSeizure;
+    boolean logThresholdChanges;
 
-    public DialogFragmentLogSettings(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals) {
+    public DialogFragmentLogSettings(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
         this.logBattery = logBattery;
         this.logRawECG = logRawECG;
         this.logRRintervals = logRRintervals;
         this.logSeizureVals = logSeizureVals;
+        this.logSeizure = logSeizure;
+        this.logThresholdChanges = logThresholdChanges;
     }
 
     /* The activity that creates an instance of this dialog fragment must
      * implement this interface in order to receive event callbacks.
      * Each method passes the DialogFragment in case the host needs to query it. */
     public interface NoticeDialogListener {
-        public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals);
+        public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges);
         public void onDialogNegativeClick();
     }
 
@@ -62,19 +66,23 @@ public class DialogFragmentLogSettings extends DialogFragment {
         Switch swLogBattery = view.findViewById(R.id.swBattery);
         Switch swLogRawECG = view.findViewById(R.id.swRawECG);
         Switch swLogRRintervals = view.findViewById(R.id.swRR);
-        Switch swLogSeizureVals = view.findViewById(R.id.swSeizure);
+        Switch swLogSeizureVals = view.findViewById(R.id.swSeizureVals);
+        Switch swLogSeizure = view.findViewById(R.id.swSeizure);
+        Switch swLogThresholdChanges = view.findViewById(R.id.swThreshold);
 
         swLogBattery.setChecked(logBattery);
         swLogRawECG.setChecked(logRawECG);
         swLogRRintervals.setChecked(logRRintervals);
         swLogSeizureVals.setChecked(logSeizureVals);
+        swLogSeizure.setChecked(logSeizure);
+        swLogThresholdChanges.setChecked(logThresholdChanges);
 
         builder.setTitle(R.string.logSettingsTitle)
                 .setView(view)
                 .setPositiveButton(R.string.btnOK, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        listener.onDialogPositiveClick(swLogBattery.isChecked(),swLogRawECG.isChecked(),swLogRRintervals.isChecked(),swLogSeizureVals.isChecked());
+                        listener.onDialogPositiveClick(swLogBattery.isChecked(),swLogRawECG.isChecked(),swLogRRintervals.isChecked(),swLogSeizureVals.isChecked(),swLogSeizure.isChecked(),swLogThresholdChanges.isChecked());
                     }
                 })
                 .setNegativeButton(R.string.btnCancel, new DialogInterface.OnClickListener() {

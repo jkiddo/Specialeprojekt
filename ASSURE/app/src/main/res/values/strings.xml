@@ -20,4 +20,13 @@
     <string name="seizureNotificationDesc">Be aware: Possible seizure detected</string>
     <string name="batteryLevel">Device battery level</string>
     <string name="logSettingsTitle">Change which information is logged</string>
+    <string name="at">at</string>
+    <string name="maximumObservedValues"><u>Max observed values</u></string>
+    <string name="logseizures">Log seizures</string>
+    <string name="logRR">Log RR intervals</string>
+    <string name="logRaw">Log raw ECG data</string>
+    <string name="logBattery">Log battery consumption</string>
+    <string name="reset">Reset</string>
+    <string name="pressBackAgainToExit">Press back again to exit app</string>
+    <string name="logThresholdChanges">Log threshold changes</string>
 </resources>

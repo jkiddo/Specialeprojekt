@@ -81,8 +81,6 @@ class ServiceManager extends BluetoothGattCallback {
     private CortriumC3 mDevice;
     private Context mContext;
 
-    private Recorder recorder;
-
     enumCortriunDeviceType m_eDevice = enumCortriunDeviceType.DEFAULT;
 
     protected ServiceManager(ConnectionManager connectionManager) {
@@ -96,7 +94,6 @@ class ServiceManager extends BluetoothGattCallback {
 
     protected void setContext(Context context) {
         mContext = context;
-        recorder = new Recorder();
     }
 
     protected void discoverServicesForDevice(CortriumC3 device) {
@@ -419,8 +416,8 @@ class ServiceManager extends BluetoothGattCallback {
 
                 Vbat = (value * 1080) / 1024;
 
-//                recorder = new Recorder(mContext);
-                recorder.saveBatteryInfo(fPercent, mContext);
+//                recorder.saveBatteryInfo(fPercent, mContext);
+                reportNewBatteryLevel(fPercent);
 
 
             }
@@ -588,21 +585,6 @@ class ServiceManager extends BluetoothGattCallback {
         int[] filteredECG1 = ecgData.getFilteredEcg1Samples();
         int[] filteredECG2 = ecgData.getFilteredEcg2Samples();
         int[] filteredECG3 = ecgData.getFilteredEcg3Samples();
-
-//        singleton_MyScanningRecorder2.SaveFiltered(filteredECG1, filteredECG2, filteredECG3);
-
-        // JKNJKN
-//        if (singleton_Send_Data.m_bSend) {
-///*            singleton_Send_Data.m_bSend = false;
-//            byte [] data = {0x70,0x00,0x50};
-//            data[0] = singleton_Send_Data.m_byteSend;
-//            //Toast.makeText(mContext, "Begin messages send" + (int)data[0], Toast.LENGTH_SHORT).show();
-//            singleton_Send_Data.m_byteSend++;
-//            if( singleton_Send_Data.m_byteSend > 0x72)
-//                singleton_Send_Data.m_byteSend = 0x70;
-//*/
-//            writeDataToChar(singleton_Send_Data.GetBuffer());
-//        }
 
         reportNewEcgData(ecgData);
     }
@@ -1205,6 +1187,18 @@ class ServiceManager extends BluetoothGattCallback {
 
     public void setEcgDataListener(ConnectionManager.EcgDataListener listener) {
         this.listener = listener;
+    }
+
+    private void reportNewBatteryLevel(Float percent){
+        if (this.batListener != null) {
+            this.batListener.batteryPercentUpdated(percent);
+        }
+    }
+
+    private ConnectionManager.BatteryDataListener batListener = null;
+
+    public void setBatteryDataListener(ConnectionManager.BatteryDataListener batListener) {
+        this.batListener = batListener;
     }
 
 }

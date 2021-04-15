@@ -2,7 +2,7 @@ package com.au.assure.data;
 
 import android.util.Log;
 
-public final class ConvertVBatToPercent {
+    public final class ConvertVBatToPercent {
 
     private final static float [] fVoltage = { 4.121f , 3.969f , 3.856f , 3.753f , 3.668f , 3.609f , 3.572f , 3.537f , 3.497f , 3.438f , 3.305f };
     private final static float [] fHoursLeft = { 229.63f , 206.52f , 183.41f , 159.83f , 136.72f , 113.61f , 90.50f , 67.39f , 44.28f , 20.70f , 0.00f };

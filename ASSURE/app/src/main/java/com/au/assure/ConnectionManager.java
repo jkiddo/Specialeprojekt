@@ -292,6 +292,17 @@ public final class ConnectionManager {
         this.listener = listener;
     }
 
+    public interface BatteryDataListener {
+        void batteryPercentUpdated(float percent);
+    }
+
+    public void setBatteryDataListener(BatteryDataListener batteryDataListener){
+        if (mGattCallback != null)
+        {
+            mGattCallback.setBatteryDataListener(batteryDataListener);
+        }
+    }
+
     public interface EcgDataListener
     {
         void ecgDataUpdated(EcgData ecgData);

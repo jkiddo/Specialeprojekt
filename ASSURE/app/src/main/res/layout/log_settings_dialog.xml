@@ -18,7 +18,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Log battery consumption"
+        android:text="@string/logBattery"
         android:layout_alignParentStart="true"
         android:textStyle="bold"
         android:id="@+id/tv1"
@@ -44,7 +44,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Log Raw ECG data"
+            android:text="@string/logRaw"
             android:layout_alignParentStart="true"
             android:textStyle="bold"
             android:id="@+id/tv2"
@@ -70,7 +70,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Log RR intervals"
+            android:text="@string/logRR"
             android:layout_alignParentStart="true"
             android:textStyle="bold"
             android:id="@+id/tv3"
@@ -103,7 +103,59 @@
             android:layout_centerVertical="true"/>
 
         <Switch
+            android:id="@+id/swSeizureVals"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"/>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rl4"
+        android:id="@+id/rl5">
+
+        <View style="@style/Divider.Horizontal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/logseizures"
+            android:layout_alignParentStart="true"
+            android:textStyle="bold"
+            android:id="@+id/tv5"
+            android:layout_centerVertical="true"/>
+
+        <Switch
             android:id="@+id/swSeizure"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"/>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rl5"
+        android:id="@+id/rl6">
+
+        <View style="@style/Divider.Horizontal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/logThresholdChanges"
+            android:layout_alignParentStart="true"
+            android:textStyle="bold"
+            android:id="@+id/tv6"
+            android:layout_centerVertical="true"/>
+
+        <Switch
+            android:id="@+id/swThreshold"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
