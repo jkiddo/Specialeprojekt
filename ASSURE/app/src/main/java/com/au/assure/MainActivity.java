@@ -177,7 +177,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy: called.");
-        sendNotificationDisconnect();
         super.onDestroy();
 
         if( broadcastReceiver4!=null)
@@ -186,9 +185,8 @@ public class MainActivity extends AppCompatActivity
             if (m_ConnectionManager.getConnectionState() == ConnectionManager.ConnectionStates.Scanning)
                 m_ConnectionManager.stopScanning();
             m_ConnectionManager.disconnect();
+            sendNotificationDisconnect();
         }
-
-
     }
 
     public void btnDiscover(View view) {
@@ -278,7 +276,6 @@ public class MainActivity extends AppCompatActivity
 
     public void StartConnectionManager()
     {
-        // Try to solve problem with C3-device not being discoverable.
         if(bluetoothAdapter.isDiscovering()) {
             bluetoothAdapter.cancelDiscovery();
         }
@@ -519,7 +516,7 @@ public class MainActivity extends AppCompatActivity
         // Create an instance of the dialog fragment and show it
         DialogFragmentEditValues editValues = new DialogFragmentEditValues(ModCSIThresh, CSIThresh);
         editValues.show(getSupportFragmentManager(), "editValues");
-        sendNotificationSeizure();
+//        sendNotificationSeizure();
     }
 
     // The dialog fragment receives a reference to this Activity through the
@@ -527,6 +524,14 @@ public class MainActivity extends AppCompatActivity
     // defined by the NoticeDialogFragment.NoticeDialogListener interface
     @Override
     public void onDialogPositiveClick(double modCSI, double CSI) { // User touched the dialog's positive button
+        // Log the threshold change if it is enabled by the user
+        if (logThresholdChanges) {
+            // Log only if the values were actually changed
+            if (CSIThresh != CSI || ModCSIThresh != modCSI) {
+                recorder.saveThresholdChange(CSIThresh, ModCSIThresh, CSI, modCSI);
+            }
+        }
+
         // Set the new values
         ModCSIThresh = modCSI;
         CSIThresh = CSI;

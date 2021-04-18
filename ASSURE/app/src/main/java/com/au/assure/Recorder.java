@@ -326,7 +326,32 @@ public class Recorder {
         }
     }
 
-    public void saveThresholdChange() {
-        
+    public void saveThresholdChange(double oldCSI, double oldModCSI, double newCSI, double newModCSI) {
+        Calendar cal = Calendar.getInstance();
+        Date currentLocalTime = cal.getTime();
+        DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+        String currentTime = date.format(currentLocalTime);
+
+        String str = "User changed threshold values at " + currentTime;
+        str = str + "\nOld CSI: " + oldCSI;
+        str = str + "\nOld ModCSI: " + oldModCSI;
+        str = str + "\nNew CSI: " + newCSI;
+        str = str + "\nNew ModCSI: " + newModCSI;
+        str = str + "\n\n";
+
+        FileOutputStream fos;
+        File file = new File(GetSavePathThreshLog());
+        try {
+            file.createNewFile();
+            fos = new FileOutputStream(file,true);
+
+            if (file != null) {
+                fos.write(str.getBytes());
+                file.getTotalSpace();
+                fos.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

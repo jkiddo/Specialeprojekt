@@ -13,23 +13,25 @@
         android:layout_height="wrap_content"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:id="@+id/rl1"
-        >
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/logBattery"
-        android:layout_alignParentStart="true"
-        android:textStyle="bold"
-        android:id="@+id/tv1"
-        android:layout_centerVertical="true"/>
+        android:id="@+id/rl1">
 
-    <Switch
-        android:id="@+id/swBattery"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_centerVertical="true"/>
+        <View style="@style/Divider.Horizontal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/logBattery"
+            android:layout_alignParentStart="true"
+            android:textStyle="bold"
+            android:id="@+id/tv1"
+            android:layout_centerVertical="true"/>
+
+        <Switch
+            android:id="@+id/swBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"/>
     </RelativeLayout>
 
     <RelativeLayout
