@@ -699,10 +699,10 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void batteryPercentUpdated(float percent) {
+    public void batteryPercentUpdated(float percent, float vBat) {
         // If the battery level should be logged
         if (logBattery) {
-            recorder.saveBatteryInfo(percent,getApplicationContext());
+            recorder.saveBatteryInfo(percent,vBat,getApplicationContext());
         }
 
         // And update UI

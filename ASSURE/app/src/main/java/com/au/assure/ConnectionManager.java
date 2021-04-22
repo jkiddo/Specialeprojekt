@@ -293,7 +293,7 @@ public final class ConnectionManager {
     }
 
     public interface BatteryDataListener {
-        void batteryPercentUpdated(float percent);
+        void batteryPercentUpdated(float percent, float vBat);
     }
 
     public void setBatteryDataListener(BatteryDataListener batteryDataListener){

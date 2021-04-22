@@ -156,7 +156,7 @@ public class Recorder {
         return rootThresh + "/" + filenameThresh;
     }
 
-    public void saveBatteryInfo(float c3BatPct, Context context) {
+    public void saveBatteryInfo(float c3BatPct, float vBat, Context context) {
         IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         batteryStatus = context.registerReceiver(null, ifilter);
 
@@ -166,7 +166,7 @@ public class Recorder {
         float phoneBatPct = level * 100 / (float)scale;
 
         String line = "\n\nPhone battery percent: " + phoneBatPct + "\nC3 battery percent: " + c3BatPct
-                + "\n" + Calendar.getInstance().getTime().toString();
+                + "\nC3 battery voltage: " + vBat + "\n" + Calendar.getInstance().getTime().toString();
 
         FileOutputStream fos;
         File file = new File(GetSavePathBatteryLog());
@@ -353,5 +353,9 @@ public class Recorder {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void saveManualSeizure(Date date, String comment) {
+
     }
 }

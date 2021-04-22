@@ -119,16 +119,6 @@ class ServiceManager extends BluetoothGattCallback {
                             Log.i("JKN", "Service UUID Found: " + str);
                         }
 
-//  00001800-0000-1000-8000-00805f9b34fb    	GENERIC_INFORMATION_SERVICE
-//  00001801-0000-1000-8000-00805f9b34fb		GENERIC_ATTRIBUTES_SERVICE
-//  0000180a-0000-1000-8000-00805f9b34fb		EVICE_INFORMATION_SERVICE
-//  0000ffc0-0000-1000-8000-00805f9b34fb		CONTRIUM_C3_DATA_SERVICE
-
-                        // C3TESTER
-                        /// Service UUID Found: 00001800-0000-1000-8000-00805f9b34fb    	GENERIC_INFORMATION_SERVICE
-                        /// Service UUID Found: 00001801-0000-1000-8000-00805f9b34fb		GENERIC_ATTRIBUTES_SERVICE
-                        /// Service UUID Found: 6e400001-b5a3-f393-e0a9-e50e24dcca9e     BLE_SERVICE_UUID_C3TESTER
-
                     }
                 }
             }
@@ -153,38 +143,6 @@ class ServiceManager extends BluetoothGattCallback {
         }
     }
 
-    /*
-        boolean m_Scanning = false;
-        ScanCallback m_scanCallback = null;
-
-        void Make_ScanCallback() {
-            m_scanCallback = new ScanCallback() {
-                @Override
-                public void onScanResult(int callbackType, ScanResult result) {
-                    super.onScanResult(callbackType, result);
-
-                    ScanRecord scanRecord = result.getScanRecord();
-                    byte[] scanBytes = scanRecord.getBytes();
-                    int iLength = (int) scanBytes[0];
-                    String str = "iLength = " + iLength + " ";
-    //                Log.i("JKN",str);
-
-                    for (int i = 0; i < iLength; i++) {
-                        //str += "," + scanBytes[i + 1];
-                        str += getHexString( ((int)scanBytes[i+1])>=0 ? ((int)scanBytes[i+1]):((int)scanBytes[i+1]+1+0xFF) );
-                    }
-
-                    if (scanRecord.getAdvertiseFlags() == -1) {
-                        Log.i("JKN", str);
-
-                    } else
-                        Log.i("JKN", "Other : ( " + scanRecord.getAdvertiseFlags() + " ) " + str);
-
-                }
-            };
-
-        }
-    */
     // JKN 6/9-2019
     // https://intersog.com/blog/tech-tips/how-to-work-properly-with-bt-le-on-android/
     private void ConnectToService(BluetoothGatt gatt) {
@@ -208,44 +166,9 @@ class ServiceManager extends BluetoothGattCallback {
         BluetoothGattDescriptor descriptor = c.getDescriptors().get(0);
         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
         gatt.writeDescriptor(descriptor);
-/*
-//This is usually needed as well
-        //BluetoothGattDescriptor desc = c.getDescriptor(BLE_CHARACTERISTIC_UUID_Rx);//	INPUT_DESC_ID);
-        BluetoothGattDescriptor desc = c.getDescriptor(BLE_SERVICE_UUID_C3TESTER);
-//Could also be ENABLE_NOTIICATION_VALUE
-        desc.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-        gatt.writeDescriptor(desc);
-*/
+
     }
 
-    // JKN 6/9-2019
-/*
-    // JKN 5/9-2019
-    // https://intersog.com/blog/tech-tips/how-to-work-properly-with-bt-le-on-android/
-    private void StartScanning_intersog()
-    {
-        ScanSettings scanSettings = new ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .build();
-
-        String deviceName = mDevice.getName();
-        String deviceAddress = mDevice.getAddress();
-
-        //If name or address of peripheral is known
-        ScanFilter scanFilter = new ScanFilter.Builder()
-                .setDeviceName(deviceName)
-                .setDeviceAddress(deviceAddress)
-                .build();
-
-        if ( m_scanCallback == null )
-            Make_ScanCallback();
-
-        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        BluetoothLeScanner bluetoothLeScanner = adapter.getBluetoothLeScanner();
-        bluetoothLeScanner.startScan(Collections.singletonList(scanFilter), scanSettings, m_scanCallback );
-    }
-    // JKN 5/9-2019
-*/
     String[] strLetter = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
 
     public String getHexString(int b) {
@@ -287,37 +210,9 @@ class ServiceManager extends BluetoothGattCallback {
 
 
     long m_lLastMissingTime = 0;
-    /*
-        private singleton_Shared_Data m_sData = null;
-        private singleton_Shared_Data GetSharedData()
-        {
-            if( m_sData==null)
-                m_sData = singleton_Shared_Data.getInstance();
-            return m_sData;
-        }
-    */
-    public C3S_Reader m_C3S_Reader = new C3S_Reader("32min.C3S");
 
-
-    public void ReadFile() {
-        byte[] Line = m_C3S_Reader.GetLine();
-        if (Line != null)
-            decode_c(Line);
-    }
 
     private void decode_c(byte[] Line) {
-
-/*
-        if( true) {
-            decode_Static();
-            return;
-        }
-/*
-        if( m_sDebugSettings.GetShowStaticData() )
-        {
-            decode_Static();
-            return;
-        }*/
 
         if (mFirstBatchAfterConnection) {
             C1_Value = 0;
@@ -325,7 +220,7 @@ class ServiceManager extends BluetoothGattCallback {
             C3_Value = 0;
         }
 
-        int Length = Line[0];                            //First byte contains the length of the telegram
+        int Length = Line[0]; //First byte contains the length of the telegram
 
         int index = 0;
 
@@ -344,32 +239,12 @@ class ServiceManager extends BluetoothGattCallback {
                 m_lLastMissingTime = lCurrentTime;
             }
 
-
-            //Log.i("JKN", "( Index_Counter : " + Index_Counter  );
-
             MyIndex_Counter = Index_Counter;
-
-            //String strLog = "Index counter : " + Index_Counter;
-            //           Log.i("JKN",strLog);
-
 
         }
 
-//        if (true) {
-//            if (m_sDebugSettings == null)
-//                m_sDebugSettings = singleton_DebugSettings.getInstance();
-//            if ((m_sDebugSettings != null) && (m_sDebugSettings.Get_IsRecording())) {
-//                singleton_MyScanningRecorder.Save(Line);
-//                //singleton_MyScanningRecorder.Save(Line);
-//
-//            }
-//        }
-
         int Samples = Line[index++];
-/*        int Acc_X = (((Line[index] << 4)&0xFF0) | ((Line[index+1]>>4)&0x0F))<<4 ;			//5 6 // 0xFFF0
-        int Acc_Y = (((Line[index+1]&0x0F)<<8) | (Line[index+2]&0xFF))<<4;				//6 7 // 0xFFF0
-        int Acc_Z = (((Line[index+3] << 4)&0xFF0) | ((Line[index+4]>>4)&0x0F))<<4;		//8 9 // 0xFFF0
-*/
+
         int Acc_X = Convert_16bit_Sign_Value((((Line[index] << 4) & 0xFF0) | ((Line[index + 1] >> 4) & 0x0F)) << 4);            //5 6 // 0xFFF0
         int Acc_Y = Convert_16bit_Sign_Value((((Line[index + 1] & 0x0F) << 8) | (Line[index + 2] & 0xFF)) << 4);                //6 7 // 0xFFF0
         int Acc_Z = Convert_16bit_Sign_Value((((Line[index + 3] << 4) & 0xFF0) | ((Line[index + 4] >> 4) & 0x0F)) << 4);        //8 9 // 0xFFF0
@@ -384,21 +259,6 @@ class ServiceManager extends BluetoothGattCallback {
         Acc_X = Acc_X / 16;
         Acc_Y = Acc_Y / 16;
         Acc_Z = Acc_Z / 16;
-
-//        if (true) {
-//            if (m_sDebugSettings == null)
-//                m_sDebugSettings = singleton_DebugSettings.getInstance();
-//            if (m_sDebugSettings != null) {
-//
-//                if (m_sDebugSettings.m_GraphX != null)
-//                    m_sDebugSettings.m_GraphX.SetValue((float) (Acc_X));
-//                if (m_sDebugSettings.m_GraphY != null)
-//                    m_sDebugSettings.m_GraphY.SetValue((float) (Acc_Y));
-//                if (m_sDebugSettings.m_GraphZ != null)
-//                    m_sDebugSettings.m_GraphZ.SetValue((float) (Acc_Z));
-//
-//            }
-//        }
 
         if (Events != 0x00)        //Read event bytes
         {
@@ -417,7 +277,7 @@ class ServiceManager extends BluetoothGattCallback {
                 Vbat = (value * 1080) / 1024;
 
 //                recorder.saveBatteryInfo(fPercent, mContext);
-                reportNewBatteryLevel(fPercent);
+                reportNewBatteryLevel(fPercent, fVbat);
 
 
             }
@@ -544,7 +404,6 @@ class ServiceManager extends BluetoothGattCallback {
                 Log.i("JKN", "decode error : ( index > Length ) : " + index + " >= " + Length);
             }
 
-            //         Log.i("JKN",str);
             str += " ";
 
             C1_Value += C1_Diff;
@@ -569,15 +428,9 @@ class ServiceManager extends BluetoothGattCallback {
 
         ecgData.SetSampleIndex(Index_Counter);
 
-        //if(  ecgData.miscInfo.getAccelerometerX())
-
-        //       ecgData.SetAccelerometerRaw( Acc_X , Acc_Y , Acc_Z );
-
         int[] decodedECG1 = ecgData.getRawEcg1Samples();
         int[] decodedECG2 = ecgData.getRawEcg2Samples();
         int[] decodedECG3 = ecgData.getRawEcg3Samples();
-
-//        singleton_MyScanningRecorder2.SaveRaw(decodedECG1, decodedECG2, decodedECG3);
 
         // Apply filters
         ecgData.applyFilters_C3_PLUS(mHighPassFilters, mLowPassFilters, mHeartRateDetector);
@@ -918,19 +771,6 @@ class ServiceManager extends BluetoothGattCallback {
             }
         }
     }
-/*
-    @Override
-    public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
-    {
-        //if (status == BluetoothGatt.GATT_SUCCESS && c.getUUID().equals(outputChar.getUUID()))
-        if (status == BluetoothGatt.GATT_SUCCESS )// && c.getUUID().equals(outputChar.getUUID()))
-        {
-            //Write operation successful - process with next chunk!
-        }
-    }
-*/
-    // https://intersog.com/blog/tech-tips/how-to-work-properly-with-bt-le-on-android/
-    // Write to BLE device ( BLE_CHARACTERISTIC_UUID_Tx )
 
     private void broadcastSensorMode(SensorMode sensorMode) {
         if (this.listener != null)
@@ -958,12 +798,6 @@ class ServiceManager extends BluetoothGattCallback {
             mLowPassFilters[0] = new EcgLowPassFilter();
             mLowPassFilters[1] = new EcgLowPassFilter();
             mLowPassFilters[2] = new EcgLowPassFilter();
-
-//            mRespHighPassFilter = new RespHighPassFilter();
-//            mRespLowPassFilter = new RespLowPassFilter();
-//
-//            mPeakDetector = new PeakDetector();
-            //mHeartRateDetector = new HeartRate(CortriumC3.SAMPLE_RATE_ECG, iSampleCount);
 
             int iSampleRate = (iSampleCount == 6 ? CortriumC3.SAMPLE_RATE_ECG : 256);
             mHeartRateDetector = new HeartRate(iSampleRate, iSampleCount);
@@ -1131,9 +965,6 @@ class ServiceManager extends BluetoothGattCallback {
         } else if (GattAttributes.BLE_CHARACTERISTIC_UUID_Rx.equals(characteristicID)) {
             byte[] buffer = characteristic.getValue();
 
-//            if (m_sDebugSettings.GetShowStaticData())
-//                decode_Static();
-//            else
                 decode_c(buffer);
         }
 
@@ -1189,9 +1020,9 @@ class ServiceManager extends BluetoothGattCallback {
         this.listener = listener;
     }
 
-    private void reportNewBatteryLevel(Float percent){
+    private void reportNewBatteryLevel(Float percent, Float vBat){
         if (this.batListener != null) {
-            this.batListener.batteryPercentUpdated(percent);
+            this.batListener.batteryPercentUpdated(percent, vBat);
         }
     }
 
