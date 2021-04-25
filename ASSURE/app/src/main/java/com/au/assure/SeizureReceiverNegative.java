@@ -15,6 +15,6 @@ public class SeizureReceiverNegative extends BroadcastReceiver {
 
         // Close the notification
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.cancel(1);
+        notificationManager.cancel(3);
     }
 }

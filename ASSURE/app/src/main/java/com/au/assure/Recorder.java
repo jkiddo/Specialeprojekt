@@ -354,8 +354,4 @@ public class Recorder {
             e.printStackTrace();
         }
     }
-
-    public void saveManualSeizure(Date date, String comment) {
-
-    }
 }

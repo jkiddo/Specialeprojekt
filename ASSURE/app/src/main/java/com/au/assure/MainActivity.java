@@ -2,37 +2,26 @@ package com.au.assure;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.Manifest;
-import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.media.AudioAttributes;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
-
-import com.au.assure.datapackages.EcgData;
-import com.au.assure.datatypes.SensorMode;
-import com.au.assure.pantompkins.OSEAFactory;
-import com.au.assure.pantompkins.detection.QRSDetector2;
+import androidx.core.content.ContextCompat;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -40,19 +29,17 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity
-        implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener
-        , AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener
-        , DialogFragmentLogSettings.NoticeDialogListener, ConnectionManager.BatteryDataListener
-{
+        implements AdapterView.OnItemClickListener, DialogFragmentEditValues.NoticeDialogListener
+        , DialogFragmentLogSettings.NoticeDialogListener, DialogFragmentConfirmDisconnect.DisconnectDialogListener {
     public ArrayList<BluetoothDevice> btDevices = new ArrayList<>();
     public DeviceListAdapter deviceListAdapter;
 
     private static final String TAG = "MainActivity";
-    private NotificationManagerCompat notificationManager;
-    public static final String CHANNEL_1_ID = "SeizureChannel";
-    public static final String CHANNEL_2_ID = "DisconnectChannel";
+
+    Button discoverBtn;
 
     int REQUEST_ENABLE_BT;
     ListView lvNewDevices;
@@ -62,28 +49,16 @@ public class MainActivity extends AppCompatActivity
     TextView tvLatestModCSI;
     TextView tvLatestCSI;
     TextView tvTimestamp;
-    ConnectionManager m_ConnectionManager = null;
-    ArrayList<CortriumC3> m_al_C3Devices;
-    ArrayList<String> m_al_C3Names;
     BluetoothAdapter bluetoothAdapter;
-    String m_strReconnect_DeviceName = null;
-    int m_iC3DiscoveredCount = 0;
     boolean bResult = false;
     double ModCSIThresh;
     double CSIThresh;
     double defaultModCSI;
     double defaultCSI;
-    double observedModCSI;
-    double observedCSI;
     View listItem;
     int sampleRate; // ECG-device samplerate (Hz)
-    QRSDetector2 qrsDetector;
     List<Integer> rPeakBuffer;
-    List<Double> rrIntervals;
     SeizureDetector seizureDetector;
-    Uri uri;
-    NotificationChannel SeizureChannel;
-    NotificationChannel DisconnectChannel;
     int sampleCounter;
     int rrSinceSeizure;
     boolean logBattery = false;
@@ -100,6 +75,56 @@ public class MainActivity extends AppCompatActivity
     double maxCSI;
     Recorder recorder;
 
+    Intent serviceIntent;
+
+    public enum State {
+        NOTCONNECTED,
+        CONNECTED,
+        DISCOVERING
+    }
+
+    public State state = State.NOTCONNECTED;
+
+    public void SetState(State newState) {
+        switch (newState) {
+            case NOTCONNECTED:
+                state = State.NOTCONNECTED;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        discoverBtn.setText("Discover devices");
+                        tvStatus.setText(R.string.status);
+                        if (listItem != null) {
+                            listItem.setBackgroundColor(Color.WHITE);
+                        }
+                        btDevices.clear();
+                        deviceListAdapter.notifyDataSetChanged();
+                    }
+                });
+                break;
+            case DISCOVERING:
+                state = State.DISCOVERING;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        discoverBtn.setText("Cancel discovery");
+                        tvStatus.setText(R.string.statusScanning);
+                    }
+                });
+                break;
+            case CONNECTED:
+                state = State.CONNECTED;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        discoverBtn.setText("Disconnect");
+                        tvStatus.setText(R.string.statusConnected);
+                    }
+                });
+                break;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -110,8 +135,6 @@ public class MainActivity extends AppCompatActivity
         tvStatus = findViewById(R.id.lbStatus);
         lvNewDevices = findViewById(R.id.lvNewDevices);
         lvNewDevices.setOnItemClickListener(MainActivity.this);
-        m_al_C3Devices = new ArrayList<>();
-        m_al_C3Names = new ArrayList<>();
         tvModCSI = findViewById(R.id.tvModCSI);
         tvCSI = findViewById(R.id.tvCSI);
         tvLatestModCSI = findViewById(R.id.latestModCSI);
@@ -129,9 +152,10 @@ public class MainActivity extends AppCompatActivity
         maxModCSI = 0;
         maxCSI = 0;
         recorder = new Recorder();
+        discoverBtn = findViewById(R.id.btnDiscover);
 
         // Initialize qrsDetector
-        qrsDetector = OSEAFactory.createQRSDetector2(sampleRate);
+//        qrsDetector = OSEAFactory.createQRSDetector2(sampleRate);
 
         // Read stored thresholds
         SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
@@ -144,63 +168,207 @@ public class MainActivity extends AppCompatActivity
         logRRintervals = sharedPref.getBoolean("logRRintervals", logRRintervals);
         logSeizureVals = sharedPref.getBoolean("logSeizureVals", logSeizureVals);
         logSeizure = sharedPref.getBoolean("logSeizure", logSeizure);
-        logThresholdChanges = sharedPref.getBoolean("logThresh",logThresholdChanges);
+        logThresholdChanges = sharedPref.getBoolean("logThresh", logThresholdChanges);
 
         // Display stored thresholds
         tvModCSI.setText(Double.toString(ModCSIThresh));
         tvCSI.setText(Double.toString(CSIThresh));
 
+        deviceListAdapter = new DeviceListAdapter(getApplicationContext(), R.layout.device_list_adapter, btDevices);
+        lvNewDevices.setAdapter(deviceListAdapter);
+
         checkBTPermissions();
 
-        // Ask user to enable bluetooth
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
         if (bluetoothAdapter == null) {
             // Bluetooth not supported on device
-            Toast toast = Toast.makeText(getApplicationContext(),R.string.btNotSupported,Toast.LENGTH_LONG);
+            Toast toast = Toast.makeText(getApplicationContext(), R.string.btNotSupported, Toast.LENGTH_LONG);
             toast.show();
         }
+
+        // Ask user to enable bluetooth
         if (!bluetoothAdapter.isEnabled()) {
             // Enable bluetooth
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
+        serviceIntent = new Intent(this, ForegroundService.class);
+        serviceIntent.putExtra("MODCSITHRESH", ModCSIThresh);
+        serviceIntent.putExtra("CSITHRESH", CSIThresh);
+        serviceIntent.putExtra("LOGBATTERY", logBattery);
+        serviceIntent.putExtra("LOGRAWECG", logRawECG);
+        serviceIntent.putExtra("LOGRRINTERVALS", logRRintervals);
+        serviceIntent.putExtra("LOGSEIZUREVALS", logSeizureVals);
+        serviceIntent.putExtra("LOGSEIZURE", logSeizure);
+        serviceIntent.putExtra("LOGTHRESH", logThresholdChanges);
+    }
 
-        //Broadcasts when bond state changes (ie:pairing)
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
-        registerReceiver(broadcastReceiver4, filter);
+    ForegroundService mService;
+    boolean mBound = false;
 
-        // Initialize notification manager
-        createNotificationChannels();
-        notificationManager = NotificationManagerCompat.from(this);
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Bind to ForegroundService
+        Intent intent = new Intent(this, ForegroundService.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unbindService(connection);
+        mBound = false;
+        if (state == State.DISCOVERING) {
+            mService.cancelDiscovery();
+            SetState(State.NOTCONNECTED);
+        }
+    }
+
+    /**
+     * Defines callbacks for service binding, passed to bindService()
+     */
+    private ServiceConnection connection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            ForegroundService.LocalBinder binder = (ForegroundService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+
+            if (mService.CONNECTED) {
+                SetState(State.CONNECTED);
+            } else if (!mService.CONNECTED) {
+                SetState(State.NOTCONNECTED);
+            }
+
+            binder.setCallback(new ForegroundService.uiCallback() {
+                @Override
+                public void onBufferUpdate(String msg) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            tvLatestModCSI.setText(msg);
+                            tvLatestCSI.setText(msg);
+
+                            // Update timestamp
+                            Calendar cal = Calendar.getInstance();
+                            Date currentLocalTime = cal.getTime();
+                            DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+                            String currentTime = date.format(currentLocalTime);
+                            tvTimestamp.setText(currentTime);
+                        }
+                    });
+                }
+
+                @Override
+                public void onSeizureValsUpdate(double modCSI, double CSI) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            tvLatestModCSI.setText(String.format("%.2f",modCSI));
+                            tvLatestCSI.setText(String.format("%.2f",CSI));
+
+                            // Update timestamp
+                            Calendar cal = Calendar.getInstance();
+                            Date currentLocalTime = cal.getTime();
+                            DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+                            String currentTime = date.format(currentLocalTime);
+                            tvTimestamp.setText(currentTime);
+                        }
+                    });
+                }
+
+                @Override
+                public void onMaxSeizureValsUpdate(double maxModCSI, double maxCSI) {
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            tvMaxModCSI.setText(String.format("%.2f",maxModCSI));
+                            tvMaxCSI.setText(String.format("%.2f",maxCSI));
+
+                            // Update timestamp
+                            Calendar cal = Calendar.getInstance();
+                            Date currentLocalTime = cal.getTime();
+                            DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
+                            String currentTime = date.format(currentLocalTime);
+                            tvMaxTimestamp.setText(currentTime);
+                        }
+                    });
+                }
+
+                @Override
+                public void onBatteryUpdate(double percent) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            tvBatteryLevel.setText(Double.toString(percent));
+                        }
+                    });
+                }
+
+                @Override
+                public void onDeviceFound(CortriumC3 device) {
+                    // Add new device and update the listview
+                    btDevices.add(device.getBluetoothDevice());
+                    deviceListAdapter.notifyDataSetChanged();
+                }
+
+                @Override
+                public void onConnected() {
+                    StartForeground();
+                    SetState(State.CONNECTED);
+                }
+
+                @Override
+                public void onDisconnect() {
+                    SetState(State.NOTCONNECTED);
+                }
+            });
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
+
+    private void StartForeground() {
+        // Promote service to foreground, when a device is connected.
+        ContextCompat.startForegroundService(this, serviceIntent);
     }
 
     @Override
     protected void onDestroy() {
         Log.d(TAG, "onDestroy: called.");
         super.onDestroy();
-
-        if( broadcastReceiver4!=null)
-            unregisterReceiver(broadcastReceiver4);
-        if( m_ConnectionManager != null ) {
-            if (m_ConnectionManager.getConnectionState() == ConnectionManager.ConnectionStates.Scanning)
-                m_ConnectionManager.stopScanning();
-            m_ConnectionManager.disconnect();
-            sendNotificationDisconnect();
-        }
     }
 
     public void btnDiscover(View view) {
-        StartConnectionManager();
+        if (state == State.CONNECTED) {
+            // We display a dialog instead of just disconnecting right away:
+            DialogFragmentConfirmDisconnect dialog = new DialogFragmentConfirmDisconnect();
+            dialog.show(getSupportFragmentManager(), "DialogFragmentConfirmDisconnect");
+        } else if (state == State.NOTCONNECTED) {
+            mService.StartConnectionManager();
+            SetState(State.DISCOVERING);
+        } else if (state == State.DISCOVERING) {
+            mService.cancelDiscovery();
+            SetState(State.NOTCONNECTED);
+        }
     }
 
     private void checkBTPermissions() {
-        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP){
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
             int permissionCheck = this.checkSelfPermission("Manifest.permission.ACCESS_FINE_LOCATION");
             permissionCheck += this.checkSelfPermission("Manifest.permission.ACCESS_COARSE_LOCATION");
             permissionCheck += this.checkSelfPermission("Manifest.permission.WRITE_EXTERNAL_STORAGE");
             permissionCheck += this.checkSelfPermission("Manifest.permission.READ_EXTERNAL_STORAGE");
-            if (permissionCheck != 0)
-            {
+            if (permissionCheck != 0) {
                 // You can only request permissions once, so request ALL in one go.
                 this.requestPermissions(new String[]{
                         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -209,328 +377,32 @@ public class MainActivity extends AppCompatActivity
                         Manifest.permission.READ_EXTERNAL_STORAGE
                 }, 1001); //Any number
             }
-        }else{
+        } else {
             Log.d(TAG, "checkBTPermissions: No need to check permissions. SDK version <= LOLLIPOP.");
         }
     }
 
-    /**
-     * Broadcast Receiver that detects bond state changes (Pairing status changes)
-     */
-    private final BroadcastReceiver broadcastReceiver4 = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-
-            if(action.equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)){
-                BluetoothDevice mDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                //3 cases:
-                //case1: bonded already
-                if (mDevice.getBondState() == BluetoothDevice.BOND_BONDED){
-                    Log.d(TAG, "BroadcastReceiver: BOND_BONDED.");
-                }
-                //case2: creating a bone
-                if (mDevice.getBondState() == BluetoothDevice.BOND_BONDING) {
-                    Log.d(TAG, "BroadcastReceiver: BOND_BONDING.");
-                }
-                //case3: breaking a bond
-                if (mDevice.getBondState() == BluetoothDevice.BOND_NONE) {
-                    Log.d(TAG, "BroadcastReceiver: BOND_NONE.");
-                }
-            }
-        }
-    };
-
-    protected void CancleConnectToDevice() {
-        m_ConnectionManager.stopScanning();
-    }
-
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-        ConnectToDevice(i);
-        if (bResult)
+        if (mBound) {
+            mService.connectToDevice(i);
             view.setBackgroundColor(getColor(R.color.softGreen));
+        }
         listItem = view;
-    }
-
-    protected void ConnectToDevice(int i)
-    {
-        m_ConnectionManager.stopScanning();
-
-        //first cancel discovery because its very memory intensive.
-        boolean b = bluetoothAdapter.cancelDiscovery();
-
-        // JKN new 4/8-2019
-        Log.d(TAG, "onItemClick: You Clicked on a device.");
-        String deviceName = m_al_C3Devices.get(i).getName();
-        String deviceAddress = m_al_C3Devices.get(i).getAddress();
-
-        Log.d(TAG, "onItemClick: deviceName = " + deviceName);
-        Log.d(TAG, "onItemClick: deviceAddress = " + deviceAddress);
-
-        bResult = m_ConnectionManager.connect(m_al_C3Devices.get(i));
-        Toast.makeText(this, "bResult = " + ( bResult?"true":"false"), Toast.LENGTH_SHORT).show();
-
-        tvStatus.setText(getString(R.string.statusConnected));
-    }
-
-    public void StartConnectionManager()
-    {
-        if(bluetoothAdapter.isDiscovering()) {
-            bluetoothAdapter.cancelDiscovery();
-        }
-
-        m_ConnectionManager = ConnectionManager.getInstance(this);
-        m_ConnectionManager.setConnectionManagerListener(this);
-        m_ConnectionManager.startScanning();
-
-        if( m_strReconnect_DeviceName == null ) {
-            tvStatus.setText(getString(R.string.statusScanning));
-            lvNewDevices.setBackgroundColor(Color.WHITE);
-        } // Startup. Not reconnect. No device selected by user.
-        else {
-            ConnectionManager.ConnectionStates state = m_ConnectionManager.getConnectionState();
-        }
-    }
-
-    @Override
-    public void startedScanning(ConnectionManager manager) {
-        Log.d(TAG, "public void startedScanning(ConnectionManager manager)");
-    }
-
-    @Override
-    public void discoveredDevice(CortriumC3 device) {
-        Log.d(TAG, "public void discoveredDevice(CortriumC3 device)");
-        m_iC3DiscoveredCount++;
-
-        String strDeviceName = device.getName();
-
-        if( strDeviceName.startsWith( "C3" ) || strDeviceName.startsWith( "B17" ) ) {
-            m_al_C3Devices.add(device);
-            m_al_C3Names.add( device.getName());
-
-            Log.d(TAG, "onReceive: " + device.getName() + ": " + device.getAddress());
-
-            if( m_strReconnect_DeviceName == null ) { // Startup. No device selected by user.
-                // Fill listview with devices.
-                btDevices.add(device.getBluetoothDevice());
-                deviceListAdapter = new DeviceListAdapter(getApplicationContext(), R.layout.device_list_adapter, btDevices);
-                lvNewDevices.setAdapter(deviceListAdapter);
-            }
-            else// Device disconnected, and app tries to reconnect.
-            {
-                if( m_strReconnect_DeviceName.equals(strDeviceName) )
-                {
-                    // Device found
-                    m_strReconnect_DeviceName = null;// No more reconnect.
-                    int iDevideIndex = m_al_C3Devices.size() - 1;
-                    ConnectToDevice(iDevideIndex);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void ecgDataUpdated(EcgData ecgData) {
-        int[] batch = ecgData.getFilteredEcg2Samples();
-
-        // If the raw data should be logged
-        if (logRawECG) {
-            recorder.saveRawECG(batch);
-        }
-
-
-        sampleCounter = sampleCounter + 12; // Determines the number of samples since last R-peak
-        // It is useful for calculating the RR interval.
-        boolean newRpeak = false;
-
-        // Send the ECG data to R-peak analysis:
-        for (int i = 0; i < batch.length; i++) {
-            int result = qrsDetector.QRSDet(batch[i]);
-            if (result != 0) { // If R-peak is detected
-                rPeakBuffer.add(sampleCounter-12+i);
-                sampleCounter = 0;
-                newRpeak = true;
-            }
-        }
-
-        // Making sure the buffer size is always 100 R-peaks
-        // The seizure detection has a 7 RR interval median filter, so an additional 7 intervals
-        // are needed
-        if (newRpeak && rPeakBuffer.size() > 107) {
-            rPeakBuffer.remove(0); // Remove first R-peak
-        }
-
-        // If the buffer is filled and new a new Rpeak is detected. This is where the
-        // seizure detection algorithm is used.
-        if (newRpeak && rPeakBuffer.size() > 106) {
-            rrIntervals = new ArrayList<>();
-
-            // Convert intervals in sample no. to intervals in seconds (RR intervals)
-            for (int i = 0; i < rPeakBuffer.size() - 1; i++) {
-                rrIntervals.add((double) rPeakBuffer.get(i) / sampleRate);
-            }
-
-            // Log the RR intervals if the user has chose to do so
-            if (logRRintervals) {
-                recorder.saveRRintervals(rrIntervals.get(rrIntervals.size()-1));
-            }
-
-            // Calculate CSI and ModCSI
-            double[] returnVals;
-            returnVals = seizureDetector.CalcModCSI_and_CSI(rrIntervals);
-            observedModCSI = returnVals[0];
-            observedCSI = returnVals[1];
-
-            // Check if the observed values are greater than the current thresholds
-            if (observedModCSI > ModCSIThresh || observedCSI > CSIThresh){
-                if (rrSinceSeizure > 100){ // Makes sure notifications don't fly out every second
-                    sendNotificationSeizure(); // Notify about seizure
-                    rrSinceSeizure = 0;
-                }
-            }
-            rrSinceSeizure++;
-
-            // Log the values if the user has chosen to do so
-            if (logSeizureVals){
-                recorder.saveModCSIandCSI(observedModCSI,observedCSI);
-            }
-
-            // Because this is a background thread, we must use a special method for updating the
-            // UI, which runs on the main thread
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    // Update the UI with latest observed values
-                    tvLatestModCSI.setText(String.format("%.2f",observedModCSI)); // with 2 decimals
-                    tvLatestCSI.setText(String.format("%.2f",observedCSI));
-
-
-                    Calendar cal = Calendar.getInstance();
-                    Date currentLocalTime = cal.getTime();
-                    DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                    String currentTime = date.format(currentLocalTime);
-
-                    // Update timestamp
-                    tvTimestamp.setText(currentTime);
-                }
-            });
-
-            // Check if this observation is larger than the currently largest observation
-            if (observedModCSI > maxModCSI) {
-                maxModCSI = observedModCSI;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        tvMaxModCSI.setText(String.format("%.2f",maxModCSI));
-                        Calendar cal = Calendar.getInstance();
-                        Date currentLocalTime = cal.getTime();
-                        DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                        String currentTime = date.format(currentLocalTime);
-                        tvMaxTimestamp.setText(currentTime);
-                    }
-                });
-            }
-            if (observedCSI > maxCSI) {
-                maxCSI = observedCSI;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        tvMaxCSI.setText(String.format("%.2f",maxCSI));
-                        Calendar cal = Calendar.getInstance();
-                        Date currentLocalTime = cal.getTime();
-                        DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                        String currentTime = date.format(currentLocalTime);
-                        tvMaxTimestamp.setText(currentTime);
-                    }
-                });
-            }
-        }
-
-        // If not enough data RR intervals yet, update the UI with how far along the buffer is
-        if (newRpeak && rPeakBuffer.size() < 107) {
-
-            // Because this is a background thread, we must use a special method for updating the
-            // UI, which runs on the main thread
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    double pct = (((double) rPeakBuffer.size())/107) *100;
-
-                    tvLatestCSI.setText(getResources().getString(R.string.waiting) + String.format("%.1f", pct) + "%");
-                    tvLatestModCSI.setText(getResources().getString(R.string.waiting) + String.format("%.1f", pct) + "%");
-                    Calendar cal = Calendar.getInstance();
-                    Date currentLocalTime = cal.getTime();
-                    DateFormat date = new SimpleDateFormat("HH:mm - dd.MM.yy");
-                    String currentTime = date.format(currentLocalTime);
-                    tvTimestamp.setText(currentTime);
-                }
-            });
-        }
-    }
-
-    @Override
-    public void modeRead(SensorMode sensorMode) {
-
-    }
-
-    @Override
-    public void deviceInformationRead(CortriumC3 device) {
-
-    }
-
-    @Override
-    public void stoppedScanning(ConnectionManager manager) {
-        Log.d(TAG, "public void stoppedScanning(ConnectionManager manager)");
-
-        if( m_strReconnect_DeviceName != null )// If reconnect not in progress
-            StartConnectionManager();
-    }
-
-    @Override
-    public void connectedToDevice(CortriumC3 device) {
-        m_ConnectionManager.setEcgDataListener(this);
-        m_ConnectionManager.setBatteryDataListener(this);
-
-        if( true ) {
-            CortriumC3 c3Device = m_ConnectionManager.getConnectedDevice();
-            String strName = c3Device.getName();
-            Log.i("JKN","DeviceName = " + strName );
-        }
-    }
-
-    @Override
-    public void disconnectedFromDevice(CortriumC3 device) {
-        sendNotificationDisconnect();
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                tvStatus.setText(getString(R.string.status));
-                if (listItem != null)
-                    listItem.setBackgroundColor(Color.WHITE);
-            }
-        });
     }
 
     public void btnEditValues(View view) {
         // Create an instance of the dialog fragment and show it
         DialogFragmentEditValues editValues = new DialogFragmentEditValues(ModCSIThresh, CSIThresh);
         editValues.show(getSupportFragmentManager(), "editValues");
-//        sendNotificationSeizure();
     }
 
-    // The dialog fragment receives a reference to this Activity through the
-    // Fragment.onAttach() callback, which it uses to call the following methods
-    // defined by the NoticeDialogFragment.NoticeDialogListener interface
+    // Dialog for changing thresholds
     @Override
     public void onDialogPositiveClick(double modCSI, double CSI) { // User touched the dialog's positive button
-        // Log the threshold change if it is enabled by the user
-        if (logThresholdChanges) {
-            // Log only if the values were actually changed
-            if (CSIThresh != CSI || ModCSIThresh != modCSI) {
-                recorder.saveThresholdChange(CSIThresh, ModCSIThresh, CSI, modCSI);
-            }
-        }
+
+        if (mBound)
+            mService.updateThresholds(modCSI, CSI);
 
         // Set the new values
         ModCSIThresh = modCSI;
@@ -548,107 +420,28 @@ public class MainActivity extends AppCompatActivity
         editor.apply();
     }
 
+    // Dialog for disconnecting
+    @Override
+    public void onDialogPositiveClick() {
+        mService.disconnect();
+        mService.stopSelf();
+        mService.stopForeground(true);
+        SetState(State.NOTCONNECTED);
+    }
+
     @Override
     public void onDialogNegativeClick() { // User touched the dialog's negative button
         // Cancelled - nothing happens
     }
 
-    // Notification methods
-    private void createNotificationChannels() {
-        SeizureChannel = new NotificationChannel(
-                CHANNEL_1_ID,
-                "SeizureChannel",
-                NotificationManager.IMPORTANCE_HIGH
-        );
-
-        // Sound https://www.e2s.com/references-and-guidelines/listen-and-download-alarm-tones
-        uri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"+ getApplicationContext().getPackageName()
-                + "/" + R.raw.tone15);
-        SeizureChannel.setDescription("This is seizure channel");
-        AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                .build();
-        SeizureChannel.setSound(uri, audioAttributes);
-        SeizureChannel.setVibrationPattern(new long[]{0, 8000});
-        SeizureChannel.enableVibration(true);
-
-        DisconnectChannel = new NotificationChannel(
-            CHANNEL_2_ID,
-            "DisconnectChannel",
-            NotificationManager.IMPORTANCE_HIGH
-        );
-
-        DisconnectChannel.setDescription("This channel shows messages when device is disconnected");
-        DisconnectChannel.enableVibration(true);
-
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        manager.createNotificationChannel(SeizureChannel);
-        manager.createNotificationChannel(DisconnectChannel);
-    }
-
-    private final BroadcastReceiver seizureNegReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String a = "a";
-        }
-    };
-
-    public void sendNotificationSeizure() {
-
-        // If logging is enable by user, log the time of the seizure
-        if (logSeizure){
-            recorder.saveSeizures();
-        }
-
-        // This intent makes it possible to open the app by pressing the notification
-        Intent activityIntent = new Intent(this, MainActivity.class);
-        PendingIntent contentIntent = PendingIntent.getActivity(this,
-                0, activityIntent, 0);
-
-        // This intent is used for when the user presses YES to the seizure notification
-        Intent posIntent = new Intent(this, SeizureReceiverPositive.class);
-        PendingIntent actionPosIntent = PendingIntent.getBroadcast(this,
-                0,posIntent,PendingIntent.FLAG_UPDATE_CURRENT);
-
-        // This intent is used for when the user presses NO to the seizure notificaiton
-        Intent negIntent = new Intent(this, SeizureReceiverNegative.class);
-        PendingIntent actionNegIntent = PendingIntent.getBroadcast(this,
-                0,negIntent,PendingIntent.FLAG_UPDATE_CURRENT);
-
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_1_ID)
-                .setSmallIcon(R.drawable.ic_exclamation_triangle_solid)
-                .setContentTitle(getString(R.string.seizureNotificationTitle))
-                .setContentText(getString(R.string.seizureNotificationDesc))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_SYSTEM)
-                .setColor(Color.RED)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setContentIntent(contentIntent)
-                .addAction(R.mipmap.ic_launcher,"YES",actionPosIntent)
-                .addAction(R.mipmap.ic_launcher,"NO",actionNegIntent)
-                .build();
-        notificationManager.notify(1,notification);
-    }
-
-    public void sendNotificationDisconnect() {
-        Notification notification = new NotificationCompat.Builder(this,CHANNEL_2_ID)
-                .setSmallIcon(R.drawable.ic_exclamation_triangle_solid)
-                .setContentTitle("Disconnected")
-                .setContentText("Disconnected from device")
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_SYSTEM)
-                .build();
-        notificationManager.notify(2,notification);
-    }
-
     public void btnLogSettings(View view) {
         // Create an instance of the dialog fragment and show it
-        DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery,logRawECG,logRRintervals,
-                logSeizureVals,logSeizure,logThresholdChanges);
+        DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery, logRawECG, logRRintervals,
+                logSeizureVals, logSeizure, logThresholdChanges);
         logSettings.show(getSupportFragmentManager(), "logSettings");
     }
 
+    // Dialog for changing log settings
     @Override
     public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals,
                                       boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
@@ -658,6 +451,9 @@ public class MainActivity extends AppCompatActivity
         this.logSeizureVals = logSeizureVals;
         this.logSeizure = logSeizure;
         this.logThresholdChanges = logThresholdChanges;
+
+        if (mBound)
+            mService.updateLogSettings(logBattery,logRawECG,logRRintervals,logSeizureVals,logSeizure,logThresholdChanges);
 
         // Store the new values for next time the app is opened
         SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
@@ -672,8 +468,8 @@ public class MainActivity extends AppCompatActivity
     }
 
     public void btnResetValues(View view) {
-        maxModCSI = 0;
-        maxCSI = 0;
+        if (mBound)
+            mService.resetMaxValues();
     }
 
     boolean doubleBackToExitPressedOnce = false;
@@ -693,24 +489,8 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public void run() {
-                doubleBackToExitPressedOnce=false;
+                doubleBackToExitPressedOnce = false;
             }
         }, 2000);
-    }
-
-    @Override
-    public void batteryPercentUpdated(float percent, float vBat) {
-        // If the battery level should be logged
-        if (logBattery) {
-            recorder.saveBatteryInfo(percent,vBat,getApplicationContext());
-        }
-
-        // And update UI
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                tvBatteryLevel.setText(percent + "%");
-            }
-        });
     }
 }
