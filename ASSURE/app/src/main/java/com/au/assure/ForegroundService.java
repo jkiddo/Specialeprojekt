@@ -155,8 +155,8 @@ public class ForegroundService extends Service
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL1_ID)
-                .setContentTitle("Seizure detection")
-                .setContentText("Running...")
+                .setContentTitle("Detection is active")
+                .setContentText("Rest assured, ASSURE is looking out for you 😉")
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentIntent(pendingIntent)
                 .build();
@@ -249,13 +249,6 @@ public class ForegroundService extends Service
         m_ConnectionManager.setConnectionManagerListener(this);
         m_ConnectionManager.startScanning();
 
-//        if (m_strReconnect_DeviceName == null) {
-////            tvStatus.setText(getString(R.string.statusScanning));
-////            lvNewDevices.setBackgroundColor(Color.WHITE);
-//        } // Startup. Not reconnect. No device selected by user.
-//        else {
-//            ConnectionManager.ConnectionStates state = m_ConnectionManager.getConnectionState();
-//        }
     }
 
     protected void ConnectToDevice(int i) {
@@ -345,6 +338,8 @@ public class ForegroundService extends Service
         if (callback != null) {
             callback.onDisconnect();
         }
+        m_ConnectionManager.disconnect();
+        m_ConnectionManager.ReleaseInstance();// Reset Bluetooth connection
         stopSelf();
         stopForeground(true);
     }

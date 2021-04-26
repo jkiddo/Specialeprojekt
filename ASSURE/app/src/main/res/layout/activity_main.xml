@@ -36,7 +36,7 @@
         android:layout_marginTop="20dp"
         android:textSize="22sp"
         android:textStyle="bold"
-        android:textColor="@color/design_default_color_secondary_variant"
+        android:textColor="@color/themeGreen"
         android:text="@string/status"/>
 
     <TextView
@@ -60,6 +60,16 @@
         android:textSize="28sp"
         android:textStyle="bold|italic"/>
 
+    <View
+        android:id="@+id/divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginStart="8dp"
+        android:background="@android:color/darker_gray"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/label1"
+        android:layout_marginBottom="10sp"/>
 
     <TextView
         android:layout_width="wrap_content"
@@ -122,10 +132,21 @@
         android:onClick="btnEditValues"
         app:layout_constraintTop_toTopOf="@+id/label2"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginRight="20sp"
+        android:layout_marginEnd="20sp"
         android:text="@string/editValues"
         android:drawableLeft="@drawable/edit_text"
         />
+
+    <View
+        android:id="@+id/divider2"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginStart="8dp"
+        android:background="@android:color/darker_gray"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/label4"
+        android:layout_marginBottom="10sp"/>
 
     <TextView
         android:layout_width="wrap_content"
@@ -228,6 +249,17 @@
         android:drawableLeft="@drawable/log_settings"
         />
 
+    <View
+        android:id="@+id/divider3"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginStart="8dp"
+        android:background="@android:color/darker_gray"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/label11"
+        android:layout_marginBottom="10sp"/>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -277,6 +309,17 @@
         app:layout_constraintTop_toBottomOf="@id/label9"
         android:layout_marginTop="10sp"
         />
+
+    <View
+        android:id="@+id/divider4"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginStart="8dp"
+        android:background="@android:color/darker_gray"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/maxCSI"
+        android:layout_marginTop="30sp"/>
 
     <TextView
         android:id="@+id/label12"
