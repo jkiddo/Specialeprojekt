@@ -54,7 +54,7 @@ public class TestingFragment extends Fragment {
                 List<Integer> rDetections = new ArrayList<>(); // Indices of the detected R-peaks
                 List<Float> rIntervals = new ArrayList<>(); // Seconds between each R-peak
                 int sampleRate = 256;
-                int inputFile = R.raw.patient_28_3_256hz_resample;
+                int inputFile = R.raw.ecg_p1_exercise;
 
 //                Read TXT file
                 InputStream is = getResources().openRawResource(inputFile);
@@ -362,6 +362,46 @@ public class TestingFragment extends Fragment {
                     double maxCSI = Collections.max(CSIs);
 
                     textView.setText("Max ModCSI100_filt_slope: " + maxModCSI_filt_slope + "\nMax CSI100: " + maxCSI);
+
+
+                    // Save modCSI values to file
+                    String filename = "ModCSI_" + getResources().getResourceEntryName(inputFile) + ".csv";
+                    String modCSIString = "";
+                    for (int i = 0; i < modCSIs.size(); i++) {
+                        modCSIString += modCSIs.get(i).toString();
+                        if (i < modCSIs.size() - 1) {
+                            modCSIString += ";";
+                        }
+                    }
+                    try {
+                        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(getActivity().openFileOutput(filename, getActivity().MODE_PRIVATE));
+                        outputStreamWriter.write(modCSIString);
+                        outputStreamWriter.close();
+
+                    } catch (IOException e) {
+                        Log.e("Exception", "File write failed: " + e.toString());
+                        textView.setText("Error: File save failed");
+                    }
+
+                    // Save CSI values to file
+                    String filenameCSI = "CSI_" + getResources().getResourceEntryName(inputFile) + ".csv";
+                    String CSIString = "";
+                    for (int i = 0; i < CSIs.size(); i++) {
+                        CSIString += CSIs.get(i).toString();
+                        if (i < CSIs.size() - 1) {
+                            CSIString += ";";
+                        }
+                    }
+                    try {
+                        OutputStreamWriter outputStreamWriter = new OutputStreamWriter(getActivity().openFileOutput(filenameCSI, getActivity().MODE_PRIVATE));
+                        outputStreamWriter.write(CSIString);
+                        outputStreamWriter.close();
+
+                    } catch (IOException e) {
+                        Log.e("Exception", "File write failed: " + e.toString());
+                        textView.setText("Error: File save failed");
+                    }
+
 
                 } catch (IOException e) {
                     e.printStackTrace();

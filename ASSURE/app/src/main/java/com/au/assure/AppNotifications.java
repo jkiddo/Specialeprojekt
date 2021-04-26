@@ -39,7 +39,7 @@ public class AppNotifications extends Application {
     private void createNotificaitonChannelDisconnect() {
         NotificationChannel DisconnectChannel = new NotificationChannel(
             CHANNEL2_ID,
-            "DisconnectChannel",
+            "Disconnect Channel",
             NotificationManager.IMPORTANCE_HIGH
         );
 
@@ -53,14 +53,14 @@ public class AppNotifications extends Application {
     private void createNotificationChannelSeizure() {
                 NotificationChannel SeizureChannel = new NotificationChannel(
                 CHANNEL3_ID,
-                "SeizureChannel",
+                "Seizure Channel",
                 NotificationManager.IMPORTANCE_HIGH
         );
 
         // Sound https://www.e2s.com/references-and-guidelines/listen-and-download-alarm-tones
         Uri uri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://"+ getApplicationContext().getPackageName()
                 + "/" + R.raw.tone15);
-        SeizureChannel.setDescription("This is seizure channel");
+        SeizureChannel.setDescription("This channel shows messages when a seizure is detected");
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)

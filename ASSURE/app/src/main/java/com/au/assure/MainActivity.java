@@ -50,17 +50,11 @@ public class MainActivity extends AppCompatActivity
     TextView tvLatestCSI;
     TextView tvTimestamp;
     BluetoothAdapter bluetoothAdapter;
-    boolean bResult = false;
     double ModCSIThresh;
     double CSIThresh;
     double defaultModCSI;
     double defaultCSI;
     View listItem;
-    int sampleRate; // ECG-device samplerate (Hz)
-    List<Integer> rPeakBuffer;
-    SeizureDetector seizureDetector;
-    int sampleCounter;
-    int rrSinceSeizure;
     boolean logBattery = false;
     boolean logRawECG = false;
     boolean logRRintervals = false;
@@ -73,57 +67,10 @@ public class MainActivity extends AppCompatActivity
     TextView tvBatteryLevel;
     double maxModCSI;
     double maxCSI;
-    Recorder recorder;
 
     Intent serviceIntent;
 
-    public enum State {
-        NOTCONNECTED,
-        CONNECTED,
-        DISCOVERING
-    }
 
-    public State state = State.NOTCONNECTED;
-
-    public void SetState(State newState) {
-        switch (newState) {
-            case NOTCONNECTED:
-                state = State.NOTCONNECTED;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        discoverBtn.setText("Discover devices");
-                        tvStatus.setText(R.string.status);
-                        if (listItem != null) {
-                            listItem.setBackgroundColor(Color.WHITE);
-                        }
-                        btDevices.clear();
-                        deviceListAdapter.notifyDataSetChanged();
-                    }
-                });
-                break;
-            case DISCOVERING:
-                state = State.DISCOVERING;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        discoverBtn.setText("Cancel discovery");
-                        tvStatus.setText(R.string.statusScanning);
-                    }
-                });
-                break;
-            case CONNECTED:
-                state = State.CONNECTED;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        discoverBtn.setText("Disconnect");
-                        tvStatus.setText(R.string.statusConnected);
-                    }
-                });
-                break;
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,22 +87,13 @@ public class MainActivity extends AppCompatActivity
         tvLatestModCSI = findViewById(R.id.latestModCSI);
         tvLatestCSI = findViewById(R.id.latestCSI);
         tvTimestamp = findViewById(R.id.latestUpdateTime);
-        sampleRate = 256;
-        rPeakBuffer = new ArrayList<>();
-        seizureDetector = new SeizureDetector();
-        sampleCounter = 0;
-        rrSinceSeizure = 100; //Default high value
         tvMaxTimestamp = findViewById(R.id.maxUpdateTime);
         tvMaxModCSI = findViewById(R.id.maxModCSI);
         tvMaxCSI = findViewById(R.id.maxCSI);
         tvBatteryLevel = findViewById(R.id.tvBatteryLevel);
         maxModCSI = 0;
         maxCSI = 0;
-        recorder = new Recorder();
         discoverBtn = findViewById(R.id.btnDiscover);
-
-        // Initialize qrsDetector
-//        qrsDetector = OSEAFactory.createQRSDetector2(sampleRate);
 
         // Read stored thresholds
         SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
@@ -174,7 +112,7 @@ public class MainActivity extends AppCompatActivity
         tvModCSI.setText(Double.toString(ModCSIThresh));
         tvCSI.setText(Double.toString(CSIThresh));
 
-        deviceListAdapter = new DeviceListAdapter(getApplicationContext(), R.layout.device_list_adapter, btDevices);
+        deviceListAdapter = new DeviceListAdapter(this, R.layout.device_list_adapter, btDevices);
         lvNewDevices.setAdapter(deviceListAdapter);
 
         checkBTPermissions();
@@ -223,6 +161,54 @@ public class MainActivity extends AppCompatActivity
         if (state == State.DISCOVERING) {
             mService.cancelDiscovery();
             SetState(State.NOTCONNECTED);
+        }
+    }
+
+    public enum State {
+        NOTCONNECTED,
+        CONNECTED,
+        DISCOVERING
+    }
+
+    public State state = State.NOTCONNECTED;
+
+    public void SetState(State newState) {
+        switch (newState) {
+            case NOTCONNECTED:
+                state = State.NOTCONNECTED;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        discoverBtn.setText("Discover devices");
+                        tvStatus.setText(R.string.status);
+                        if (listItem != null) {
+                            listItem.setBackgroundColor(Color.WHITE);
+                        }
+                        btDevices.clear();
+                        deviceListAdapter.notifyDataSetChanged();
+                    }
+                });
+                break;
+            case DISCOVERING:
+                state = State.DISCOVERING;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        discoverBtn.setText("Cancel discovery");
+                        tvStatus.setText(R.string.statusScanning);
+                    }
+                });
+                break;
+            case CONNECTED:
+                state = State.CONNECTED;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        discoverBtn.setText("Disconnect");
+                        tvStatus.setText(R.string.statusConnected);
+                    }
+                });
+                break;
         }
     }
 
@@ -306,7 +292,7 @@ public class MainActivity extends AppCompatActivity
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            tvBatteryLevel.setText(Double.toString(percent));
+                            tvBatteryLevel.setText(String.format("%.2f",percent));
                         }
                     });
                 }
@@ -340,12 +326,6 @@ public class MainActivity extends AppCompatActivity
     private void StartForeground() {
         // Promote service to foreground, when a device is connected.
         ContextCompat.startForegroundService(this, serviceIntent);
-    }
-
-    @Override
-    protected void onDestroy() {
-        Log.d(TAG, "onDestroy: called.");
-        super.onDestroy();
     }
 
     public void btnDiscover(View view) {
@@ -384,9 +364,10 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+        // Selecting bluetooth device from list
         if (mBound) {
             mService.connectToDevice(i);
-            view.setBackgroundColor(getColor(R.color.softGreen));
+            view.setBackgroundColor(getColor(R.color.themeGreen));
         }
         listItem = view;
     }
@@ -474,7 +455,7 @@ public class MainActivity extends AppCompatActivity
 
     boolean doubleBackToExitPressedOnce = false;
 
-    // Make sure to warn the user before using the back button to terminate activity
+    // Make sure to warn the user before using the back button to exit the app
     @Override
     public void onBackPressed() {
         if (doubleBackToExitPressedOnce) {

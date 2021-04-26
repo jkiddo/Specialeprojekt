@@ -2,10 +2,10 @@
     <string name="app_name">ASSURE</string>
     <string name="btNotSupported">Bluetooth is not supported on this device</string>
     <string name="btnDiscover">Discover devices</string>
-    <string name="status">Status: Not connected</string>
+    <string name="status">Not connected, tap to discover</string>
     <string name="subTitle">Automated Seizure Surveillance for Research in Epilepsy</string>
-    <string name="statusScanning">Status: Scanning for C3+ devices</string>
-    <string name="statusConnected">Status: Connected to C3+</string>
+    <string name="statusScanning">Scanning for C3+ devices</string>
+    <string name="statusConnected">Connected to C3+</string>
     <string name="yourPersonalValues"><u>Your personal thresholds</u></string>
     <string name="defaultModCSI">15000</string>
     <string name="defaultCSI">10</string>
@@ -16,8 +16,8 @@
     <string name="btnOK">OK</string>
     <string name="btnCancel">Cancel</string>
     <string name="inputError">Must input only numbers, decimal separator is a "."</string>
-    <string name="seizureNotificationTitle">SEIZURE</string>
-    <string name="seizureNotificationDesc">Did you have a seizure?</string>
+    <string name="seizureNotificationTitle">🆘 SEIZURE 🆘</string>
+    <string name="seizureNotificationDesc">Did you have a seizure? Select below:</string>
     <string name="batteryLevel">Device battery level</string>
     <string name="logSettingsTitle">Change which information is logged</string>
     <string name="at">at</string>
