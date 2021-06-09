@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -61,6 +62,7 @@ public class MainActivity extends AppCompatActivity
     boolean logSeizureVals = false;
     boolean logSeizure = true;
     boolean logThresholdChanges = false;
+    boolean receiveRemoteNotifications = false;
     TextView tvMaxTimestamp;
     TextView tvMaxModCSI;
     TextView tvMaxCSI;
@@ -69,8 +71,6 @@ public class MainActivity extends AppCompatActivity
     double maxCSI;
 
     Intent serviceIntent;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,7 +96,8 @@ public class MainActivity extends AppCompatActivity
         discoverBtn = findViewById(R.id.btnDiscover);
 
         // Read stored thresholds
-        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+//        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         defaultModCSI = Double.parseDouble(getString(R.string.defaultModCSI));
         defaultCSI = Double.parseDouble(getString(R.string.defaultCSI));
         ModCSIThresh = sharedPref.getFloat("savedModCSI", (float) defaultModCSI);
@@ -107,6 +108,7 @@ public class MainActivity extends AppCompatActivity
         logSeizureVals = sharedPref.getBoolean("logSeizureVals", logSeizureVals);
         logSeizure = sharedPref.getBoolean("logSeizure", logSeizure);
         logThresholdChanges = sharedPref.getBoolean("logThresh", logThresholdChanges);
+        receiveRemoteNotifications = sharedPref.getBoolean("receiveRemote", receiveRemoteNotifications);
 
         // Display stored thresholds
         tvModCSI.setText(Double.toString(ModCSIThresh));
@@ -140,6 +142,7 @@ public class MainActivity extends AppCompatActivity
         serviceIntent.putExtra("LOGSEIZUREVALS", logSeizureVals);
         serviceIntent.putExtra("LOGSEIZURE", logSeizure);
         serviceIntent.putExtra("LOGTHRESH", logThresholdChanges);
+        serviceIntent.putExtra("RECEIVEREMOTE", receiveRemoteNotifications);
     }
 
     ForegroundService mService;
@@ -418,26 +421,28 @@ public class MainActivity extends AppCompatActivity
     public void btnLogSettings(View view) {
         // Create an instance of the dialog fragment and show it
         DialogFragmentLogSettings logSettings = new DialogFragmentLogSettings(logBattery, logRawECG, logRRintervals,
-                logSeizureVals, logSeizure, logThresholdChanges);
+                logSeizureVals, logSeizure, logThresholdChanges, receiveRemoteNotifications);
         logSettings.show(getSupportFragmentManager(), "logSettings");
     }
 
     // Dialog for changing log settings
     @Override
     public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals,
-                                      boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
+                                      boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges, boolean receiveRemoteNotifications) {
         this.logBattery = logBattery;
         this.logRawECG = logRawECG;
         this.logRRintervals = logRRintervals;
         this.logSeizureVals = logSeizureVals;
         this.logSeizure = logSeizure;
         this.logThresholdChanges = logThresholdChanges;
+        this.receiveRemoteNotifications = receiveRemoteNotifications;
 
         if (mBound)
-            mService.updateLogSettings(logBattery,logRawECG,logRRintervals,logSeizureVals,logSeizure,logThresholdChanges);
+            mService.updateLogSettings(logBattery,logRawECG,logRRintervals,logSeizureVals,logSeizure,logThresholdChanges,receiveRemoteNotifications);
 
         // Store the new values for next time the app is opened
-        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+//        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putBoolean("logBattery", logBattery);
         editor.putBoolean("logRawECG", logRawECG);
@@ -445,6 +450,7 @@ public class MainActivity extends AppCompatActivity
         editor.putBoolean("logSeizureVals", logSeizureVals);
         editor.putBoolean("logSeizure", logSeizure);
         editor.putBoolean("logThresh", logThresholdChanges);
+        editor.putBoolean("receiveRemote", receiveRemoteNotifications);
         editor.apply();
     }
 

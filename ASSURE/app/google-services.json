@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "764396210315",
+    "project_id": "assure-88af0",
+    "storage_bucket": "assure-88af0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764396210315:android:10a6875a9c2cfcbb686c8e",
+        "android_client_info": {
+          "package_name": "com.au.assure"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "764396210315-d43m8cffv7jfi2acu06e2q9ur6r0agi8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0Up8G6rTeJld0wYyUUiSS05ZRok8aYpo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "764396210315-d43m8cffv7jfi2acu06e2q9ur6r0agi8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

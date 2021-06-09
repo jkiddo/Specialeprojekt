@@ -12,6 +12,7 @@ public class AppNotifications extends Application {
     public static final String CHANNEL1_ID = "ServiceChannel";
     public static final String CHANNEL2_ID = "DisconnectChannel";
     public static final String CHANNEL3_ID = "SeizureChannel";
+//    public static final String CHANNEL4_ID = "RemoteChannel";
 
     @Override
     public void onCreate() {
@@ -19,6 +20,7 @@ public class AppNotifications extends Application {
         createNotificationChannelForeground();
         createNotificaitonChannelDisconnect();
         createNotificationChannelSeizure();
+//        createNotificationChannelRemoteNotification();
     }
 
     private void createNotificationChannelForeground() {
@@ -72,4 +74,17 @@ public class AppNotifications extends Application {
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.createNotificationChannel(SeizureChannel);
     }
+
+//    private void createNotificationChannelRemoteNotification() {
+//        NotificationChannel RemoteChannel = new NotificationChannel(
+//                CHANNEL4_ID,
+//                "Remote notifications channel",
+//                NotificationManager.IMPORTANCE_HIGH
+//        );
+//        RemoteChannel.setDescription("This channel shows seizure messages from remotely connected devices");
+//        RemoteChannel.enableVibration(true);
+//
+//        NotificationManager manager = getSystemService(NotificationManager.class);
+//        manager.createNotificationChannel(RemoteChannel);
+//    }
 }
