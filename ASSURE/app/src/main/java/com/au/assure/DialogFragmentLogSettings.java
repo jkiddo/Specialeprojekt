@@ -20,21 +20,23 @@ public class DialogFragmentLogSettings extends DialogFragment {
     boolean logSeizureVals;
     boolean logSeizure;
     boolean logThresholdChanges;
+    boolean receiveRemoteNotifications;
 
-    public DialogFragmentLogSettings(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
+    public DialogFragmentLogSettings(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges, boolean receiveRemoteNotifications) {
         this.logBattery = logBattery;
         this.logRawECG = logRawECG;
         this.logRRintervals = logRRintervals;
         this.logSeizureVals = logSeizureVals;
         this.logSeizure = logSeizure;
         this.logThresholdChanges = logThresholdChanges;
+        this.receiveRemoteNotifications = receiveRemoteNotifications;
     }
 
     /* The activity that creates an instance of this dialog fragment must
      * implement this interface in order to receive event callbacks.
      * Each method passes the DialogFragment in case the host needs to query it. */
     public interface NoticeDialogListener {
-        public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges);
+        public void onDialogPositiveClick(boolean logBattery, boolean logRawECG, boolean logRRintervals, boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges, boolean receiveRemoteNotifications);
         public void onDialogNegativeClick();
     }
 
@@ -69,6 +71,7 @@ public class DialogFragmentLogSettings extends DialogFragment {
         Switch swLogSeizureVals = view.findViewById(R.id.swSeizureVals);
         Switch swLogSeizure = view.findViewById(R.id.swSeizure);
         Switch swLogThresholdChanges = view.findViewById(R.id.swThreshold);
+        Switch swReceiveRemoteNotifications = view.findViewById(R.id.swRemoteNotification);
 
         swLogBattery.setChecked(logBattery);
         swLogRawECG.setChecked(logRawECG);
@@ -76,13 +79,14 @@ public class DialogFragmentLogSettings extends DialogFragment {
         swLogSeizureVals.setChecked(logSeizureVals);
         swLogSeizure.setChecked(logSeizure);
         swLogThresholdChanges.setChecked(logThresholdChanges);
+        swReceiveRemoteNotifications.setChecked(receiveRemoteNotifications);
 
         builder.setTitle(R.string.logSettingsTitle)
                 .setView(view)
                 .setPositiveButton(R.string.btnOK, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        listener.onDialogPositiveClick(swLogBattery.isChecked(),swLogRawECG.isChecked(),swLogRRintervals.isChecked(),swLogSeizureVals.isChecked(),swLogSeizure.isChecked(),swLogThresholdChanges.isChecked());
+                        listener.onDialogPositiveClick(swLogBattery.isChecked(),swLogRawECG.isChecked(),swLogRRintervals.isChecked(),swLogSeizureVals.isChecked(),swLogSeizure.isChecked(),swLogThresholdChanges.isChecked(),swReceiveRemoteNotifications.isChecked());
                     }
                 })
                 .setNegativeButton(R.string.btnCancel, new DialogInterface.OnClickListener() {

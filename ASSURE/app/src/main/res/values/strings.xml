@@ -31,4 +31,5 @@
     <string name="logThresholdChanges">Log threshold changes</string>
     <string name="dialog_confirm_disconnect">Are you sure you want to disconnect?</string>
     <string name="serviceChannelDesc">Shows a persistent notification when seizure detection is running</string>
+    <string name="receiveRemoteNotifications">Receive remote seizure notifications</string>
 </resources>

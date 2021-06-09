@@ -18,17 +18,33 @@ import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.au.assure.datapackages.EcgData;
 import com.au.assure.datatypes.SensorMode;
 import com.au.assure.pantompkins.OSEAFactory;
 import com.au.assure.pantompkins.detection.QRSDetector2;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingService;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.au.assure.AppNotifications.CHANNEL1_ID;
 import static com.au.assure.AppNotifications.CHANNEL2_ID;
 import static com.au.assure.AppNotifications.CHANNEL3_ID;
+//import static com.au.assure.AppNotifications.CHANNEL4_ID;
 
 public class ForegroundService extends Service
         implements ConnectionManager.OnConnectionManagerListener, ConnectionManager.EcgDataListener, ConnectionManager.BatteryDataListener {
@@ -48,6 +64,7 @@ public class ForegroundService extends Service
     private boolean logSeizureVals = false;
     private boolean logSeizure = true;
     private boolean logThresholdChanges = false;
+    private boolean receiveRemoteNotifications = false;
     private ArrayList<CortriumC3> m_al_C3Devices;
     private ArrayList<String> m_al_C3Names;
     private String m_strReconnect_DeviceName = null;
@@ -67,6 +84,10 @@ public class ForegroundService extends Service
     private Recorder recorder;
 
     private NotificationManagerCompat notificationManager;
+
+    // Used by Volley to send remote notifications. E.g. to family member smartphones.
+    private RequestQueue requestQueue;
+    private final String RemoteNotificationURL = "https://fcm.googleapis.com/fcm/send";
 
     // Binder given to clients
     private final IBinder binder = new LocalBinder();
@@ -127,6 +148,10 @@ public class ForegroundService extends Service
         //Broadcasts when bond state changes (ie:pairing)
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         registerReceiver(broadcastReceiverBT, filter);
+
+        // For remote notification
+        requestQueue = Volley.newRequestQueue(this);
+        FirebaseMessaging.getInstance().subscribeToTopic("seizures");
     }
 
     @Override
@@ -212,6 +237,54 @@ public class ForegroundService extends Service
                 .build();
         notificationManager.notify(3, notification);
     }
+
+    // Called to notify all relative/caregiver devices about the detected seizure
+    private void sendRemoteNotification() throws JSONException {
+        // Create a JSON object
+        JSONObject mainObj = new JSONObject();
+        mainObj.put("to", "/topics/"+"seizures");
+
+        JSONObject notificationObj = new JSONObject();
+        notificationObj.put("title", "Seizure alarm triggered for Oliver");
+        notificationObj.put("body", "Please attend him");
+        mainObj.put("notification", notificationObj);
+
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, RemoteNotificationURL,
+                mainObj,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+            }
+        }
+        ){
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String,String> header = new HashMap<>();
+                header.put("content-type","application/json");
+                header.put("authorization","key=\tAAAAsfmQiIs:APA91bGxHeu_TxLd0YiIN27xIbJEpi7qVgqUd1_2FePyugEk-xE_3bgWlNoQvqKZT-Oo7ZoubkOwea5TpijaO0E1YlDZ89cuCwu-OHNF60KaiG8dgP4KH6e03SAxOoldNV2ME-w5Xfwa");
+                return header;
+            }
+        };
+        requestQueue.add(request);
+    }
+
+//    // Called to display a notification when a seizure is detected on another device
+//    public void sendNotificationReceivedRemote() {
+//        Notification notification = new NotificationCompat.Builder(this, CHANNEL4_ID)
+//                .setSmallIcon(R.drawable.ic_exclamation_triangle_solid)
+//                .setContentTitle("Disconnected")
+//                .setContentText("Disconnected from device")
+//                .setPriority(NotificationCompat.PRIORITY_HIGH)
+//                .setCategory(NotificationCompat.CATEGORY_SYSTEM)
+//                .build();
+//        notificationManager.notify(4, notification);
+//    }
 
     /**
      * Broadcast Receiver that detects bond state changes (Pairing status changes)
@@ -398,7 +471,13 @@ public class ForegroundService extends Service
             // Check if the observed values are greater than the current thresholds
             if (observedModCSI > ModCSIThresh || observedCSI > CSIThresh) {
                 if (rrSinceSeizure > 100) { // Makes sure same seizure is not detected multiple times
-                    sendNotificationSeizure(); // Notify about seizure
+                    sendNotificationSeizure(); // Notify about seizure (on the phone)
+
+                    try { // Try to send a remote notification to family members
+                        sendRemoteNotification();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                     rrSinceSeizure = 0;
                 }
             }
@@ -483,6 +562,11 @@ public class ForegroundService extends Service
     public void resetMaxValues() {
         maxModCSI = 0;
         maxCSI = 0;
+//        try { // Try to send a remote notification to family members
+//            sendRemoteNotification();
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
     }
 
     public void connectToDevice(int i) {
@@ -503,13 +587,14 @@ public class ForegroundService extends Service
     }
 
     public void updateLogSettings(boolean logBattery, boolean logRawECG, boolean logRRintervals,
-                                  boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges) {
+                                  boolean logSeizureVals, boolean logSeizure, boolean logThresholdChanges, boolean receiveRemoteNotifications) {
         this.logBattery = logBattery;
         this.logRawECG = logRawECG;
         this.logRRintervals = logRRintervals;
         this.logSeizureVals = logSeizureVals;
         this.logSeizure = logSeizure;
         this.logThresholdChanges = logThresholdChanges;
+        this.receiveRemoteNotifications = receiveRemoteNotifications;
     }
 
     public void cancelDiscovery() {
